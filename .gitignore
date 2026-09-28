@@ -1,0 +1,7 @@
+.venv/
+__pycache__/
+*.pyc
+ario/logs/*
+!ario/logs/.gitkeep
+ario/token.json
+ario/credentials.json

@@ -1,0 +1,13 @@
+anthropic
+keyring
+sounddevice
+numpy
+openwakeword
+faster-whisper
+edge-tts
+pygame
+google-api-python-client
+google-auth-oauthlib
+pywin32
+pygetwindow
+psutil
