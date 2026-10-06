@@ -10,20 +10,22 @@
 :root {
   --bg: #f4f5f7; --panel: #ffffff; --text: #1b1f24; --muted: #5d6670; --line: #dde1e6;
   --accent: #db0a40; --accent-text: #ffffff; --soft: #eef0f3; --ok: #1b7f3b; --err: #b3261e;
+  --bubble-in: #eef0f3; --bubble-out: #fde3ea; --bubble-bot: #e4f1ff;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --bg: #111418; --panel: #1a1e24; --text: #e8eaed; --muted: #9aa3ad; --line: #2c323a;
     --accent: #ff3d6e; --accent-text: #ffffff; --soft: #232830; --ok: #5cc27f; --err: #ff8a80;
+    --bubble-in: #262b33; --bubble-out: #4a1f2b; --bubble-bot: #1f3047;
   }
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
 body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { display: flex; align-items: center; gap: 10px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
+header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
 header h1 { font-size: 16px; margin: 0; }
 header .sub { color: var(--muted); font-size: 12px; }
-main { display: grid; grid-template-columns: 1fr minmax(340px, 440px); height: calc(100% - 49px); }
+main { display: grid; grid-template-columns: 1fr minmax(340px, 460px); height: calc(100% - 53px); }
 #map { height: 100%; min-height: 300px; }
 #panel { overflow-y: auto; background: var(--bg); padding: 10px 12px 40px; }
 @media (max-width: 800px) {
@@ -32,13 +34,15 @@ main { display: grid; grid-template-columns: 1fr minmax(340px, 440px); height: c
   #panel { overflow: visible; }
 }
 details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; }
-summary { cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; }
+summary { cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
 summary::after { content: "▾"; color: var(--muted); }
 details:not([open]) summary::after { content: "▸"; }
+summary .badge { margin-left: auto; }
 .body { padding: 0 12px 12px; }
 label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
 input, select, textarea, button { font: inherit; color: var(--text); }
 input, select, textarea { width: 100%; padding: 7px 9px; background: var(--soft); border: 1px solid var(--line); border-radius: 7px; }
+input[type="checkbox"] { width: auto; }
 textarea { resize: vertical; min-height: 70px; }
 button { padding: 7px 11px; border: 1px solid var(--line); background: var(--soft); border-radius: 7px; cursor: pointer; }
 button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
@@ -49,10 +53,14 @@ button:disabled { opacity: .5; cursor: wait; }
 .muted { color: var(--muted); font-size: 12px; }
 .box { background: var(--soft); border-radius: 7px; padding: 8px 10px; margin-top: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: 13px; cursor: pointer; }
-.chip input { width: auto; margin: 0; }
+.chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: 13px; color: var(--text); cursor: pointer; margin: 0; }
+.chip input { margin: 0; }
+.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--soft); color: var(--muted); }
+.badge.ok { background: var(--ok); color: #fff; }
+.badge.err { background: var(--err); color: #fff; }
+.badge.new { background: var(--accent); color: #fff; }
 .poi { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 0; border-top: 1px solid var(--line); }
-.poi input { width: auto; margin-top: 3px; }
+.poi input { margin-top: 3px; }
 .poi .name { font-weight: 600; cursor: pointer; }
 .poi .meta { grid-column: 2; color: var(--muted); font-size: 12px; }
 .cat-h { margin: 10px 0 2px; font-weight: 600; }
@@ -60,24 +68,62 @@ button:disabled { opacity: .5; cursor: wait; }
 .wp button { padding: 1px 7px; }
 .wx-line { margin: 2px 0; }
 .warn { color: var(--err); }
+.list button { margin: 3px 0; width: 100%; text-align: left; }
+#inbox { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
+.msg { max-width: 88%; padding: 6px 9px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+.msg.in { background: var(--bubble-in); align-self: flex-start; }
+.msg.out { background: var(--bubble-out); align-self: flex-end; }
+.msg.bot { background: var(--bubble-bot); align-self: flex-end; max-height: 160px; overflow-y: auto; }
+.msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
+.msg img, .msg video { max-width: 100%; max-height: 220px; border-radius: 6px; display: block; cursor: pointer; }
+.msg audio { max-width: 100%; }
+.msg a { color: inherit; }
 #status { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 9px 14px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 2000; }
 #status.show { opacity: .95; }
 #status.err { background: var(--err); color: #fff; }
 .pin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
 .team-pin { padding: 2px 7px; border-radius: 6px; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; white-space: nowrap; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
-.chatlist button { margin: 3px 0; width: 100%; text-align: left; }
+.hidden { display: none !important; }
 </style>
 </head>
 <body>
 <header>
   <div>
     <h1>🥫 CYMI Support-Zentrale</h1>
-    <div class="sub">Orte, Route und Wetter für deine Creator-Teams, direkt per Telegram verschicken</div>
+    <div class="sub">Orte, Route, Wetter und Nachrichten für deine Creator-Teams über Telegram</div>
   </div>
+  <span id="connPill" class="badge">offline</span>
 </header>
 <main>
   <div id="map"></div>
   <div id="panel">
+
+    <details id="secConn" open>
+      <summary>0 · Telegram-Bot</summary>
+      <div class="body">
+        <div id="tokenRow">
+          <label>Bot-Token vom @BotFather (einmal eingeben, bleibt in diesem Browser gespeichert)</label>
+          <div class="row">
+            <input id="token" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
+            <button id="tokenShow" title="anzeigen">👁</button>
+            <button id="connect" class="primary">Verbinden</button>
+          </div>
+        </div>
+        <div id="botInfo"></div>
+        <label>Automatik</label>
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="optLive"> Live empfangen</label>
+          <label class="chip"><input type="checkbox" id="optAutoTeams"> neue Chats = neues Team</label>
+          <label class="chip"><input type="checkbox" id="optAutoReply"> Bot antwortet selbst</label>
+        </div>
+        <div class="row" style="margin-top:8px">
+          <button id="notifyBtn">🔔 Benachrichtigungen</button>
+          <button id="backupOut">⬇ Backup</button>
+          <button id="backupIn">⬆ Backup laden</button>
+          <input type="file" id="backupFile" accept="application/json" class="hidden">
+        </div>
+      </div>
+    </details>
 
     <details open>
       <summary>1 · Team &amp; Standort</summary>
@@ -86,28 +132,28 @@ button:disabled { opacity: .5; cursor: wait; }
           <select id="teamSel"></select>
           <button id="teamDel" title="Team löschen">🗑</button>
         </div>
-        <div class="row" style="margin-top:6px">
-          <input id="teamName" placeholder="Teamname">
-          <input id="teamChat" placeholder="Telegram Chat-ID">
-          <button id="teamAdd">+ Team</button>
-        </div>
         <div id="posBox" class="box"></div>
-        <div class="row" style="margin-top:6px">
-          <button id="tgPos">📡 Position aus Telegram</button>
-          <label class="chip fixed"><input type="checkbox" id="autoPull"> alle 60 s</label>
-        </div>
+        <div id="freeChats" class="list"></div>
+        <details style="margin:8px 0 0">
+          <summary style="font-weight:400">Team manuell anlegen</summary>
+          <div class="body row">
+            <input id="teamName" placeholder="Teamname">
+            <input id="teamChat" placeholder="Chat-ID">
+            <button id="teamAdd">+ Team</button>
+          </div>
+        </details>
 
         <label>Ort suchen, Koordinaten oder Google-Maps-Link einfügen</label>
         <div class="row">
-          <input id="q" placeholder="z. B. Leipzig Hbf · 51.34, 12.37 · maps-Link">
-          <select id="qTarget" class="fixed" style="width:auto">
+          <input id="q" placeholder="z. B. Leipzig Hbf · 51.34, 12.37 · Maps-Link">
+          <select id="qTarget" class="fixed">
             <option value="pos">→ Standort</option>
             <option value="dest">→ Ziel</option>
             <option value="wp">→ Zwischenziel</option>
           </select>
           <button id="qGo">Los</button>
         </div>
-        <div id="qResults"></div>
+        <div id="qResults" class="list"></div>
 
         <label>Klick auf die Karte setzt</label>
         <select id="clickMode">
@@ -119,8 +165,19 @@ button:disabled { opacity: .5; cursor: wait; }
       </div>
     </details>
 
+    <details id="secInbox" open>
+      <summary>2 · Nachrichten <span id="inboxBadge" class="badge hidden"></span></summary>
+      <div class="body">
+        <div id="inbox"></div>
+        <div class="row" style="margin-top:6px">
+          <input id="quick" placeholder="Schnelle Antwort ans Team…">
+          <button id="quickSend" class="primary">Senden</button>
+        </div>
+      </div>
+    </details>
+
     <details open>
-      <summary>2 · Ziel &amp; Route</summary>
+      <summary>3 · Ziel &amp; Route</summary>
       <div class="body">
         <div id="destBox" class="box"></div>
         <div id="wpBox"></div>
@@ -134,13 +191,15 @@ button:disabled { opacity: .5; cursor: wait; }
           <button id="routeGo" class="primary">Route berechnen</button>
           <button id="routeOpt" title="Zwischenziele in die kürzeste Reihenfolge bringen">Reihenfolge optimieren</button>
         </div>
+        <div class="row" style="margin-top:6px">
+          <button id="destAll">Ziel für alle Teams übernehmen</button>
+        </div>
         <div id="routeBox"></div>
-        <p class="muted">Für Bus &amp; Bahn enthält die Nachricht zusätzlich einen Google-Maps-ÖPNV-Link.</p>
       </div>
     </details>
 
     <details open>
-      <summary>3 · Orte finden</summary>
+      <summary>4 · Orte finden</summary>
       <div class="body">
         <div id="catBox" class="chips"></div>
         <div class="row" style="margin-top:8px">
@@ -173,7 +232,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>4 · Wetter</summary>
+      <summary>5 · Wetter</summary>
       <div class="body">
         <button id="wxGo" class="primary">Wetter laden</button>
         <span class="muted">Standort, Ziel und Punkte entlang der Route (zur voraussichtlichen Durchfahrtszeit)</span>
@@ -182,39 +241,33 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>5 · Telegram</summary>
+      <summary>6 · Update senden</summary>
       <div class="body">
-        <label>Bot-Token (bleibt nur in diesem Browser gespeichert)</label>
-        <div class="row">
-          <input id="token" type="password" placeholder="123456:ABC-DEF…" autocomplete="off">
-          <button id="tokenShow" title="anzeigen">👁</button>
-        </div>
-        <div class="row" style="margin-top:6px">
-          <button id="tgChats">Chats &amp; Chat-IDs finden</button>
-        </div>
-        <div id="chatBox" class="chatlist"></div>
-
         <label>In die Nachricht aufnehmen</label>
         <div class="chips">
           <label class="chip"><input type="checkbox" id="incRoute" checked> Route</label>
           <label class="chip"><input type="checkbox" id="incWx" checked> Wetter</label>
           <label class="chip"><input type="checkbox" id="incPoi" checked> Orte</label>
-          <label class="chip"><input type="checkbox" id="incPins"> Orte zusätzlich als Karten-Pins</label>
+          <label class="chip"><input type="checkbox" id="incPins"> Orte als Karten-Pins</label>
         </div>
         <label>Persönliche Notiz</label>
         <textarea id="note" placeholder="z. B. Checkpoint-Challenge heute bis 18 Uhr! 💪"></textarea>
         <label>Vorschau (kannst du bearbeiten)</label>
-        <textarea id="msg" style="min-height:260px"></textarea>
+        <textarea id="msg" style="min-height:240px"></textarea>
+        <label>Bilder, Videos, Sprachnachrichten oder Dateien anhängen</label>
+        <input type="file" id="files" multiple>
+        <div class="chips" style="margin-top:8px">
+          <label class="chip"><input type="checkbox" id="toAll"> an alle Teams (gleicher Text)</label>
+        </div>
         <div class="row" style="margin-top:8px">
-          <button id="send" class="primary">📨 An Team senden</button>
+          <button id="send" class="primary">📨 Senden</button>
           <button id="regen">Neu erzeugen</button>
           <button id="copy">Kopieren</button>
         </div>
-        <p class="muted">Die Nachricht geht an die Chat-ID des ausgewählten Teams.</p>
       </div>
     </details>
 
-    <p class="muted">Daten: © OpenStreetMap-Mitwirkende (Overpass, Nominatim, OSRM via routing.openstreetmap.de), Wetter: Open-Meteo. Bitte die Dienste nicht im Sekundentakt abfragen.</p>
+    <p class="muted">Daten: © OpenStreetMap-Mitwirkende (Overpass, Nominatim, OSRM via routing.openstreetmap.de), Karten: CARTO / Esri, Wetter: Open-Meteo. Der Bot antwortet nur, solange diese Seite geöffnet ist.</p>
   </div>
 </main>
 <div id="status"></div>
@@ -297,17 +350,58 @@ const WMO = {
   95: ['⛈', 'Gewitter'], 96: ['⛈', 'Gewitter mit Hagel'], 99: ['⛈', 'Gewitter mit Hagel'],
 };
 
+// Was die Teams dem Bot schreiben bzw. antippen können
+const ACTIONS = {
+  help: { words: ['start', 'hilfe', 'help', 'menu', 'menü'], cmd: 'hilfe', desc: 'Was kann der Bot?' },
+  water: { cats: ['water'], words: ['wasser', 'trinkwasser', 'water'], cmd: 'wasser', desc: 'Trinkwasser in der Nähe' },
+  shower: { cats: ['shower'], words: ['dusche', 'duschen', 'shower'], cmd: 'dusche', desc: 'Duschen in der Nähe' },
+  toilet: { cats: ['toilet'], words: ['wc', 'toilette', 'klo', 'toilet'], cmd: 'wc', desc: 'Toiletten in der Nähe' },
+  sleep: { cats: ['sleep'], words: ['schlafen', 'schlafplatz', 'hostel', 'sleep'], cmd: 'schlafen', desc: 'Schlafplätze in der Nähe' },
+  food: { cats: ['food', 'restaurant'], words: ['essen', 'food', 'hunger', 'supermarkt'], cmd: 'essen', desc: 'Essen & Einkauf' },
+  hitch: { cats: ['hitch'], words: ['trampen', 'tanke', 'tankstelle', 'raststätte'], cmd: 'trampen', desc: 'Tankstellen & Raststätten' },
+  wifi: { cats: ['wifi'], words: ['wlan', 'wifi', 'internet'], cmd: 'wlan', desc: 'Gratis-WLAN' },
+  transport: { cats: ['transport'], words: ['bahnhof', 'bahn', 'bus', 'zug'], cmd: 'bahnhof', desc: 'Bahnhof & Bus' },
+  health: { cats: ['health'], words: ['apotheke', 'arzt', 'doktor'], cmd: 'apotheke', desc: 'Apotheke & Arzt' },
+  laundry: { cats: ['laundry'], words: ['waschsalon', 'wäsche'], cmd: 'waschsalon', desc: 'Waschsalon' },
+  weather: { words: ['wetter', 'weather'], cmd: 'wetter', desc: 'Wetter am Standort' },
+  route: { words: ['route', 'weg', 'navi'], cmd: 'route', desc: 'Route zum Ziel' },
+  setdest: { words: ['ziel'], cmd: 'ziel', desc: 'Ziel setzen, z. B. /ziel Berlin' },
+};
+const KEYBOARD = {
+  keyboard: [
+    [{ text: '📍 Standort senden', request_location: true }],
+    [{ text: '💧 Wasser' }, { text: '🚿 Dusche' }, { text: '🚻 WC' }],
+    [{ text: '🛏 Schlafen' }, { text: '🍞 Essen' }, { text: '⛽ Trampen' }],
+    [{ text: '🌦 Wetter' }, { text: '🧭 Route' }, { text: '📶 WLAN' }],
+    [{ text: '🚉 Bahnhof' }, { text: '💊 Apotheke' }, { text: '❓ Hilfe' }],
+  ],
+  resize_keyboard: true, is_persistent: true,
+};
+const BOT_RADII = [800, 2000, 5000, 12000];
+const STALE_MS = 45 * 60 * 1000;
+const INBOX_MAX = 400;
+
 // ---------- Zustand ----------
 
 function defaults() {
-  return { token: '', teams: [], activeId: null, dest: null, waypoints: [], profile: 'car',
+  return { token: '', bot: null, teams: [], activeId: null, profile: 'car',
     radius: 1500, area: 'pos', cats: ['water', 'shower', 'toilet', 'sleep', 'food'],
-    tgOffset: 0, knownChats: {}, lastLoc: {} };
+    tgOffset: 0, knownChats: {}, inbox: [], live: true, autoTeams: true, autoReply: true };
 }
 function load() {
   try {
     const s = JSON.parse(localStorage.getItem(KEY));
-    if (s) return Object.assign(defaults(), s);
+    if (s) {
+      const st = Object.assign(defaults(), s);
+      // Ältere Version: ein gemeinsames Ziel für alle Teams
+      for (const t of st.teams) {
+        if (t.dest === undefined) t.dest = s.dest || null;
+        if (!t.waypoints) t.waypoints = (s.waypoints || []).map(w => ({ ...w }));
+        t.unread = t.unread || 0;
+      }
+      delete st.dest; delete st.waypoints; delete st.lastLoc;
+      return st;
+    }
   } catch (e) { /* kein Speicher verfügbar */ }
   return defaults();
 }
@@ -316,16 +410,19 @@ function save() {
   try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* ignorieren */ }
 }
 
-// Nur zur Laufzeit
-let route = null;       // { distance, duration, coords: [[lat,lon]], legs, samples: [{lat,lon,km}] }
-let pois = [];          // { key, cat, lat, lon, name, tags, dist, km }
+// Nur zur Laufzeit, gilt für das aktive Team
+let route = null;
+let pois = [];
+let poiArea = 'pos';
 let selected = new Set();
-let weather = null;     // { points: [...] }
+let weather = null;
 let msgDirty = false;
 
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
 const activeTeam = () => state.teams.find(t => t.id === state.activeId) || null;
+const teamByChat = id => state.teams.find(t => String(t.chatId) === String(id)) || null;
 
 let statusTimer;
 function status(text, isErr = false) {
@@ -357,7 +454,6 @@ function fmtDur(s) {
 }
 const fmtClock = d => d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
 const ll = p => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`;
-const mapsPoint = p => `https://www.google.com/maps/search/?api=1&query=${ll(p)}`;
 const mapsWalk = p => `https://www.google.com/maps/dir/?api=1&destination=${ll(p)}&travelmode=walking`;
 function mapsDir(from, to, via, mode) {
   let u = `https://www.google.com/maps/dir/?api=1&origin=${ll(from)}&destination=${ll(to)}&travelmode=${mode}`;
@@ -395,145 +491,66 @@ async function reverseLabel(p) {
   }
 }
 
-// ---------- Karte ----------
+async function geocode(q, limit = 5) {
+  const res = await getJson(`${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=${limit}&accept-language=de&q=${encodeURIComponent(q)}`);
+  return res.map(r => ({ lat: +r.lat, lon: +r.lon, label: shortAddr(r.address, r.display_name), full: r.display_name }));
+}
 
-const map = L.map('map').setView([50.5, 10.5], 5);
-// Die OSM-Kachelserver verlangen einen Referer und blockieren daher lokal geöffnete Dateien.
-const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
-const baseLayers = {
-  'Karte': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    maxZoom: 20, subdomains: 'abcd', attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
-  'Satellit': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Tiles &copy; Esri' }),
-  'OpenStreetMap (nur gehostet)': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19, attribution: OSM_ATTR }),
-};
-baseLayers['Karte'].addTo(map);
-L.control.layers(baseLayers).addTo(map);
-const layers = {
-  route: L.layerGroup().addTo(map),
-  pois: L.layerGroup().addTo(map),
-  marks: L.layerGroup().addTo(map),
-  teams: L.layerGroup().addTo(map),
-};
-const pinIcon = (emoji, color) => L.divIcon({ className: '', html: `<div class="pin" style="background:${color}">${emoji}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+// ---------- Datenquellen ----------
 
-function drawMarks() {
-  layers.teams.clearLayers();
-  layers.marks.clearLayers();
-  for (const t of state.teams) {
-    if (!t.pos) continue;
-    const active = t.id === state.activeId;
-    L.marker([t.pos.lat, t.pos.lon], {
-      zIndexOffset: active ? 1000 : 0, opacity: active ? 1 : 0.6,
-      icon: L.divIcon({ className: '', html: `<div class="team-pin">📍 ${esc(t.name)}</div>`, iconSize: null, iconAnchor: [10, 12] }),
-    }).bindPopup(`<b>${esc(t.name)}</b><br>${esc(t.pos.label || ll(t.pos))}<br>${t.pos.time ? 'Stand ' + fmtClock(new Date(t.pos.time)) : ''}`)
-      .on('click', () => selectTeam(t.id)).addTo(layers.teams);
+async function overpass(query) {
+  let lastErr;
+  for (const url of OVERPASS) {
+    try {
+      return await getJson(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+    } catch (e) { lastErr = e; }
   }
-  if (state.dest) L.marker([state.dest.lat, state.dest.lon], { icon: pinIcon('🏁', '#111') }).bindPopup('Ziel: ' + esc(state.dest.label || ll(state.dest))).addTo(layers.marks);
-  state.waypoints.forEach((w, i) => L.marker([w.lat, w.lon], { icon: pinIcon(String(i + 1), '#455a64') }).bindPopup('Zwischenziel ' + (i + 1) + ': ' + esc(w.label || ll(w))).addTo(layers.marks));
+  throw lastErr;
 }
 
-map.on('click', e => {
-  const mode = $('#clickMode').value;
-  if (mode !== 'none') setPoint(mode, { lat: e.latlng.lat, lon: e.latlng.lng });
-});
-
-// ---------- Teams & Punkte ----------
-
-function renderTeams() {
-  const sel = $('#teamSel');
-  sel.innerHTML = state.teams.length
-    ? state.teams.map(t => `<option value="${esc(t.id)}" ${t.id === state.activeId ? 'selected' : ''}>${esc(t.name)}${t.chatId ? '' : ' (keine Chat-ID)'}</option>`).join('')
-    : '<option value="">– erst ein Team anlegen –</option>';
-  const t = activeTeam();
-  $('#posBox').innerHTML = !t ? '<span class="muted">Lege unten ein Team an (Name + Telegram-Chat-ID).</span>'
-    : t.pos ? `📍 <b>${esc(t.pos.label || 'Standort')}</b><br><span class="muted">${ll(t.pos)} · Stand ${fmtClock(new Date(t.pos.time))} · Chat-ID ${esc(t.chatId || '–')}</span>`
-      : `<span class="muted">Noch kein Standort für ${esc(t.name)}. Klick auf die Karte, such einen Ort oder hol die Position aus Telegram.</span>`;
-  const d = state.dest;
-  $('#destBox').innerHTML = d ? `🏁 <b>${esc(d.label || 'Ziel')}</b> <span class="muted">${ll(d)}</span> <button id="destDel" style="padding:1px 7px">✕</button>`
-    : '<span class="muted">Noch kein Ziel. Klick-Modus auf „Ziel“ stellen oder oben suchen.</span>';
-  if (d) $('#destDel').onclick = () => { state.dest = null; route = null; layers.route.clearLayers(); changed(); };
-  $('#wpBox').innerHTML = state.waypoints.map((w, i) => `<div class="wp"><span>${i + 1}. ${esc(w.label || ll(w))}</span><button data-i="${i}">✕</button></div>`).join('');
-  $('#wpBox').querySelectorAll('button').forEach(b => b.onclick = () => { state.waypoints.splice(+b.dataset.i, 1); changed(); });
-  drawMarks();
+function typeName(t) {
+  for (const k of ['tourism', 'amenity', 'shop', 'highway', 'railway', 'man_made']) {
+    if (t[k] && TYPE_NAMES[t[k]]) return TYPE_NAMES[t[k]];
+  }
+  return null;
 }
 
-function changed() {
-  save();
-  renderTeams();
-  autoMessage();
-}
-
-function selectTeam(id) {
-  state.activeId = id;
-  pois = []; selected.clear(); weather = null; route = null;
-  layers.pois.clearLayers(); layers.route.clearLayers();
-  $('#poiBox').innerHTML = ''; $('#wxBox').innerHTML = ''; $('#routeBox').innerHTML = '';
-  msgDirty = false;
-  changed();
-  const t = activeTeam();
-  if (t && t.pos) map.setView([t.pos.lat, t.pos.lon], Math.max(map.getZoom(), 12));
-}
-
-async function setPoint(target, p, label) {
-  p = { lat: p.lat, lon: p.lon, label: label || null, time: Date.now() };
-  if (target === 'pos') {
-    const t = activeTeam();
-    if (!t) return status('Erst ein Team anlegen.', true);
-    t.pos = p;
-  } else if (target === 'dest') {
-    state.dest = p;
+// Sucht Orte um einen Punkt (center) oder entlang einer Route (samples)
+async function findPois({ center, samples, radius, cats }) {
+  let around;
+  if (samples) {
+    const step = Math.ceil(samples.length / 150);
+    const pts = samples.filter((_, i) => i % step === 0 || i === samples.length - 1);
+    around = `(around:${radius},${pts.map(p => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(',')})`;
   } else {
-    state.waypoints.push(p);
+    around = `(around:${radius},${center.lat.toFixed(6)},${center.lon.toFixed(6)})`;
   }
-  route = null; layers.route.clearLayers(); $('#routeBox').innerHTML = '';
-  changed();
-  if (!label) {
-    const name = await reverseLabel(p);
-    if (name) { p.label = name; changed(); }
+  const parts = cats.flatMap(c => CATS[c].q.map(q => q + around + ';')).join('');
+  const j = await overpass(`[out:json][timeout:40];(${parts});out tags center 3000;`);
+  const found = [];
+  for (const el of j.elements || []) {
+    const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon, tags = el.tags || {};
+    if (lat == null) continue;
+    for (const c of cats) {
+      if (!CATS[c].m(tags)) continue;
+      const p = { key: `${c}:${el.type}${el.id}`, cat: c, lat, lon, tags, name: tags.name || tags.brand || typeName(tags) || CATS[c].label };
+      if (samples) {
+        let best = Infinity, km = 0;
+        for (const s of samples) {
+          const d = haversine(p, s);
+          if (d < best) { best = d; km = s.km; }
+        }
+        p.dist = best; p.km = km;
+      } else {
+        p.dist = haversine(center, p);
+      }
+      found.push(p);
+    }
   }
+  return cats.flatMap(c => found.filter(p => p.cat === c)
+    .sort((a, b) => samples ? a.km - b.km : a.dist - b.dist).slice(0, PER_CAT));
 }
-
-$('#teamAdd').onclick = () => {
-  const name = $('#teamName').value.trim();
-  if (!name) return status('Teamname fehlt.', true);
-  const t = { id: 't' + Date.now().toString(36), name, chatId: $('#teamChat').value.trim(), pos: null };
-  state.teams.push(t);
-  $('#teamName').value = ''; $('#teamChat').value = '';
-  selectTeam(t.id);
-};
-$('#teamDel').onclick = () => {
-  const t = activeTeam();
-  if (!t || !confirm(`Team „${t.name}“ löschen?`)) return;
-  state.teams = state.teams.filter(x => x !== t);
-  selectTeam(state.teams[0] ? state.teams[0].id : null);
-};
-$('#teamSel').onchange = e => selectTeam(e.target.value);
-
-$('#qGo').onclick = () => busy($('#qGo'), async () => {
-  const s = $('#q').value.trim(), target = $('#qTarget').value;
-  if (!s) return;
-  const c = parseCoords(s);
-  if (c) {
-    $('#qResults').innerHTML = '';
-    await setPoint(target, c);
-    map.setView([c.lat, c.lon], 13);
-    return;
-  }
-  const res = await getJson(`${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=5&accept-language=de&q=${encodeURIComponent(s)}`);
-  if (!res.length) return status('Nichts gefunden.', true);
-  $('#qResults').innerHTML = '<div class="chatlist">' + res.map((r, i) => `<button data-i="${i}">${esc(r.display_name)}</button>`).join('') + '</div>';
-  $('#qResults').querySelectorAll('button').forEach(b => b.onclick = () => {
-    const r = res[+b.dataset.i], p = { lat: +r.lat, lon: +r.lon };
-    $('#qResults').innerHTML = '';
-    setPoint(target, p, shortAddr(r.address, r.display_name));
-    map.setView([p.lat, p.lon], 13);
-  });
-});
-$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') $('#qGo').click(); });
-
-// ---------- Route ----------
 
 function sampleRoute(coords, stepKm) {
   const out = [{ lat: coords[0][0], lon: coords[0][1], km: 0 }];
@@ -548,195 +565,27 @@ function sampleRoute(coords, stepKm) {
   return out;
 }
 
-async function calcRoute(optimize) {
-  const t = activeTeam();
-  if (!t || !t.pos) throw new Error('Kein Standort für das Team.');
-  if (!state.dest) throw new Error('Kein Ziel gesetzt.');
-  state.profile = $('#profile').value;
-  const pts = [t.pos, ...state.waypoints, state.dest];
+// pts: Start, Zwischenziele…, Ziel. Liefert die Route und bei optimize die neue Reihenfolge der Zwischenziele.
+async function fetchRoute(pts, profile, optimize) {
   const coords = pts.map(p => `${p.lon.toFixed(6)},${p.lat.toFixed(6)}`).join(';');
-  const base = `${ROUTER}/routed-${state.profile}`;
-  let r;
-  if (optimize && state.waypoints.length >= 2) {
+  const base = `${ROUTER}/routed-${profile}`;
+  let r, order = null;
+  if (optimize && pts.length >= 4) {
     const j = await getJson(`${base}/trip/v1/driving/${coords}?source=first&destination=last&roundtrip=false&overview=full&geometries=geojson`);
     if (j.code !== 'Ok') throw new Error('Optimierung fehlgeschlagen: ' + (j.message || j.code));
-    const order = state.waypoints.map((w, i) => ({ w, idx: j.waypoints[i + 1].waypoint_index }));
-    state.waypoints = order.sort((a, b) => a.idx - b.idx).map(o => o.w);
+    order = pts.slice(1, -1).map((_, i) => i).sort((a, b) => j.waypoints[a + 1].waypoint_index - j.waypoints[b + 1].waypoint_index);
     r = j.trips[0];
-    status('Zwischenziele neu sortiert.');
   } else {
     const j = await getJson(`${base}/route/v1/driving/${coords}?overview=full&geometries=geojson`);
     if (j.code !== 'Ok') throw new Error('Keine Route: ' + (j.message || j.code));
     r = j.routes[0];
   }
   const line = r.geometry.coordinates.map(([lon, lat]) => [lat, lon]);
-  const totalKm = r.distance / 1000;
-  route = { distance: r.distance, duration: r.duration, coords: line, legs: r.legs,
-    samples: sampleRoute(line, Math.max(0.5, totalKm / 180)), profile: state.profile };
-  layers.route.clearLayers();
-  const pl = L.polyline(line, { color: '#db0a40', weight: 5, opacity: 0.8 }).addTo(layers.route);
-  map.fitBounds(pl.getBounds(), { padding: [30, 30] });
-  const legs = r.legs.length > 1 ? '<br>' + r.legs.map((l, i) => `Etappe ${i + 1}: ${fmtDist(l.distance)} · ${fmtDur(l.duration)}`).join('<br>') : '';
-  $('#routeBox').innerHTML = `<div class="box">🧭 <b>${fmtDist(r.distance)}</b> · ca. <b>${fmtDur(r.duration)}</b> (${PROFILES[state.profile].label})<br>
-    <span class="muted">Ankunft bei sofortiger Abfahrt ca. ${fmtClock(new Date(Date.now() + r.duration * 1000))}</span>${legs}</div>`;
-  changed();
-}
-$('#routeGo').onclick = () => busy($('#routeGo'), () => calcRoute(false));
-$('#routeOpt').onclick = () => busy($('#routeOpt'), () => calcRoute(true));
-$('#profile').onchange = () => { state.profile = $('#profile').value; save(); };
-
-// ---------- Orte (Overpass) ----------
-
-function renderCats() {
-  $('#catBox').innerHTML = Object.entries(CATS).map(([k, c]) =>
-    `<label class="chip"><input type="checkbox" value="${k}" ${state.cats.includes(k) ? 'checked' : ''}> ${c.icon} ${c.label}</label>`).join('');
-  $('#catBox').querySelectorAll('input').forEach(i => i.onchange = () => {
-    state.cats = [...$('#catBox').querySelectorAll('input:checked')].map(x => x.value);
-    save();
-  });
+  return { order, route: { distance: r.distance, duration: r.duration, coords: line, legs: r.legs, profile,
+    samples: sampleRoute(line, Math.max(0.5, r.distance / 1000 / 180)) } };
 }
 
-async function overpass(query) {
-  let lastErr;
-  for (const url of OVERPASS) {
-    try {
-      return await getJson(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
-    } catch (e) { lastErr = e; }
-  }
-  throw lastErr;
-}
-
-async function searchPois() {
-  const t = activeTeam();
-  const area = $('#area').value, radius = +$('#radius').value;
-  state.area = area; state.radius = radius; save();
-  if (!state.cats.length) throw new Error('Mindestens eine Kategorie wählen.');
-  let around, center;
-  if (area === 'route') {
-    if (!route) throw new Error('Erst eine Route berechnen.');
-    const s = route.samples;
-    const step = Math.ceil(s.length / 150);
-    const pts = s.filter((_, i) => i % step === 0 || i === s.length - 1);
-    around = `(around:${radius},${pts.map(p => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(',')})`;
-  } else {
-    center = area === 'dest' ? state.dest : t && t.pos;
-    if (!center) throw new Error(area === 'dest' ? 'Kein Ziel gesetzt.' : 'Kein Standort für das Team.');
-    around = `(around:${radius},${center.lat.toFixed(6)},${center.lon.toFixed(6)})`;
-  }
-  const parts = state.cats.flatMap(c => CATS[c].q.map(q => q + around + ';')).join('');
-  const j = await overpass(`[out:json][timeout:40];(${parts});out tags center 3000;`);
-
-  const found = [];
-  for (const el of j.elements || []) {
-    const lat = el.lat ?? el.center?.lat, lon = el.lon ?? el.center?.lon, tags = el.tags || {};
-    if (lat == null) continue;
-    for (const c of state.cats) {
-      if (!CATS[c].m(tags)) continue;
-      const p = { key: `${c}:${el.type}${el.id}`, cat: c, lat, lon, tags, name: tags.name || tags.brand || typeName(tags) || CATS[c].label };
-      if (area === 'route') {
-        let best = Infinity, km = 0;
-        for (const s of route.samples) {
-          const d = haversine(p, s);
-          if (d < best) { best = d; km = s.km; }
-        }
-        p.dist = best; p.km = km;
-      } else {
-        p.dist = haversine(center, p);
-      }
-      found.push(p);
-    }
-  }
-  pois = [];
-  selected.clear();
-  for (const c of state.cats) {
-    const list = found.filter(p => p.cat === c).sort((a, b) => area === 'route' ? a.km - b.km : a.dist - b.dist).slice(0, PER_CAT);
-    list.slice(0, 3).forEach(p => selected.add(p.key));
-    pois.push(...list);
-  }
-  pois.area = area;
-  renderPois();
-  status(`${pois.length} Orte gefunden.`);
-  autoMessage();
-}
-
-function typeName(t) {
-  for (const k of ['tourism', 'amenity', 'shop', 'highway', 'railway', 'man_made']) {
-    if (t[k] && TYPE_NAMES[t[k]]) return TYPE_NAMES[t[k]];
-  }
-  return null;
-}
-
-function poiInfo(p) {
-  const t = p.tags, bits = [];
-  const type = typeName(t);
-  if (type && type !== p.name) bits.push(type);
-  if (t.fee === 'no' || t['shower:fee'] === 'no') bits.push('kostenlos');
-  else if (t.fee === 'yes') bits.push('kostenpflichtig');
-  if (t.opening_hours) bits.push('⏰ ' + t.opening_hours);
-  if (t.seasonal && t.seasonal !== 'no') bits.push('saisonal');
-  if (t.access && ['private', 'customers', 'no'].includes(t.access)) bits.push('Zugang: ' + t.access);
-  return bits;
-}
-
-function distText(p) {
-  return pois.area === 'route' ? `km ${Math.round(p.km)} · ${fmtDist(p.dist)} neben Route` : fmtDist(p.dist);
-}
-
-function renderPois() {
-  layers.pois.clearLayers();
-  if (!pois.length) { $('#poiBox').innerHTML = '<p class="muted">Keine Treffer. Radius vergrößern?</p>'; return; }
-  let html = '';
-  for (const c of state.cats) {
-    const list = pois.filter(p => p.cat === c);
-    html += `<div class="cat-h">${CATS[c].icon} ${CATS[c].label} <span class="muted">(${list.length})</span></div>`;
-    if (!list.length) html += '<div class="muted">nichts gefunden</div>';
-    for (const p of list) {
-      html += `<div class="poi"><input type="checkbox" data-k="${esc(p.key)}" ${selected.has(p.key) ? 'checked' : ''}>
-        <span class="name" data-k="${esc(p.key)}">${esc(p.name)}</span>
-        <span class="meta">${esc(distText(p))}${poiInfo(p).length ? ' · ' + esc(poiInfo(p).join(' · ')) : ''}</span></div>`;
-      L.marker([p.lat, p.lon], { icon: pinIcon(CATS[c].icon, CATS[c].color) })
-        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(distText(p))}<br>${esc(poiInfo(p).join(' · '))}<br><a href="${mapsWalk(p)}" target="_blank" rel="noopener">Google Maps</a>`)
-        .addTo(layers.pois);
-    }
-  }
-  $('#poiBox').innerHTML = html;
-  $('#poiBox').querySelectorAll('input').forEach(i => i.onchange = () => {
-    i.checked ? selected.add(i.dataset.k) : selected.delete(i.dataset.k);
-    autoMessage();
-  });
-  $('#poiBox').querySelectorAll('.name').forEach(n => n.onclick = () => {
-    const p = pois.find(x => x.key === n.dataset.k);
-    map.setView([p.lat, p.lon], 17);
-  });
-}
-$('#poiGo').onclick = () => busy($('#poiGo'), searchPois);
-$('#poiNone').onclick = () => { selected.clear(); renderPois(); autoMessage(); };
-
-// ---------- Wetter ----------
-
-function fmtLocal(unix, offset) {
-  return new Date((unix + offset) * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
-}
-function fmtLocalDay(unix, offset) {
-  return new Date((unix + offset) * 1000).toLocaleDateString('de-DE', { weekday: 'short', timeZone: 'UTC' });
-}
-
-async function loadWeather() {
-  const t = activeTeam();
-  if (!t || !t.pos) throw new Error('Kein Standort für das Team.');
-  const now = Date.now() / 1000;
-  const points = [{ kind: 'pos', label: 'Standort', lat: t.pos.lat, lon: t.pos.lon, eta: now }];
-  if (route) {
-    const total = route.distance / 1000;
-    for (const f of [0.2, 0.4, 0.6, 0.8]) {
-      const s = route.samples.reduce((a, b) => Math.abs(b.km - f * total) < Math.abs(a.km - f * total) ? b : a);
-      if (s.km === 0 || s.km >= total || points.some(p => p.km === s.km)) continue;
-      points.push({ kind: 'way', km: s.km, label: `km ${Math.round(s.km)}`, lat: s.lat, lon: s.lon, eta: now + route.duration * (s.km / total) });
-    }
-  }
-  if (state.dest) points.push({ kind: 'dest', label: 'Ziel', lat: state.dest.lat, lon: state.dest.lon, eta: now + (route ? route.duration : 0) });
-
+async function fetchWeather(points) {
   const url = `${METEO}?latitude=${points.map(p => p.lat.toFixed(4)).join(',')}&longitude=${points.map(p => p.lon.toFixed(4)).join(',')}`
     + '&current=temperature_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m'
     + '&hourly=temperature_2m,precipitation_probability,precipitation,weather_code,wind_speed_10m'
@@ -745,11 +594,15 @@ async function loadWeather() {
   let j = await getJson(url);
   if (!Array.isArray(j)) j = [j];
   points.forEach((p, i) => { p.data = j[i]; });
-  weather = { points, loaded: Date.now() };
-  renderWeather();
-  autoMessage();
+  return points;
 }
 
+function fmtLocal(unix, offset) {
+  return new Date((unix + offset) * 1000).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit', timeZone: 'UTC' });
+}
+function fmtLocalDay(unix, offset) {
+  return new Date((unix + offset) * 1000).toLocaleDateString('de-DE', { weekday: 'short', timeZone: 'UTC' });
+}
 function hourAt(d, unix) {
   const h = d.hourly;
   let best = 0;
@@ -787,6 +640,308 @@ function wxSummary(p) {
   return { lines, warn };
 }
 
+// ---------- Karte ----------
+
+const map = L.map('map').setView([50.5, 10.5], 5);
+// Die OSM-Kachelserver verlangen einen Referer und blockieren daher lokal geöffnete Dateien.
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const baseLayers = {
+  'Karte': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd', attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+  'Satellit': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Tiles &copy; Esri' }),
+  'OpenStreetMap (nur gehostet)': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: OSM_ATTR }),
+};
+baseLayers['Karte'].addTo(map);
+L.control.layers(baseLayers).addTo(map);
+const layers = {
+  route: L.layerGroup().addTo(map),
+  pois: L.layerGroup().addTo(map),
+  marks: L.layerGroup().addTo(map),
+  teams: L.layerGroup().addTo(map),
+};
+const pinIcon = (emoji, color) => L.divIcon({ className: '', html: `<div class="pin" style="background:${color}">${emoji}</div>`, iconSize: [28, 28], iconAnchor: [14, 14] });
+
+function drawMarks() {
+  layers.teams.clearLayers();
+  layers.marks.clearLayers();
+  for (const t of state.teams) {
+    if (!t.pos) continue;
+    const active = t.id === state.activeId;
+    L.marker([t.pos.lat, t.pos.lon], {
+      zIndexOffset: active ? 1000 : 0, opacity: active ? 1 : 0.6,
+      icon: L.divIcon({ className: '', html: `<div class="team-pin">📍 ${esc(t.name)}</div>`, iconSize: null, iconAnchor: [10, 12] }),
+    }).bindPopup(`<b>${esc(t.name)}</b><br>${esc(t.pos.label || ll(t.pos))}<br>Stand ${fmtClock(new Date(t.pos.time))}`)
+      .on('click', () => selectTeam(t.id)).addTo(layers.teams);
+  }
+  const t = activeTeam();
+  if (!t) return;
+  if (t.dest) L.marker([t.dest.lat, t.dest.lon], { icon: pinIcon('🏁', '#111') }).bindPopup('Ziel: ' + esc(t.dest.label || ll(t.dest))).addTo(layers.marks);
+  t.waypoints.forEach((w, i) => L.marker([w.lat, w.lon], { icon: pinIcon(String(i + 1), '#455a64') }).bindPopup('Zwischenziel ' + (i + 1) + ': ' + esc(w.label || ll(w))).addTo(layers.marks));
+}
+
+map.on('click', e => {
+  const mode = $('#clickMode').value;
+  if (mode !== 'none') setPoint(mode, { lat: e.latlng.lat, lon: e.latlng.lng });
+});
+
+// ---------- Teams & Punkte ----------
+
+function createTeam(name, chatId) {
+  const t = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, chatId: chatId ? String(chatId) : '',
+    pos: null, dest: null, waypoints: [], unread: 0 };
+  state.teams.push(t);
+  if (!state.activeId) state.activeId = t.id;
+  return t;
+}
+
+function renderTeams() {
+  const sel = $('#teamSel');
+  sel.innerHTML = state.teams.length
+    ? state.teams.map(t => `<option value="${esc(t.id)}" ${t.id === state.activeId ? 'selected' : ''}>${esc(t.name)}${t.unread ? ` (${t.unread} neu)` : ''}${t.chatId ? '' : ' – keine Chat-ID'}</option>`).join('')
+    : '<option value="">– noch kein Team –</option>';
+  const t = activeTeam();
+  $('#posBox').innerHTML = !t
+    ? (state.bot ? `<span class="muted">Schick deinen Teams den Link <b>t.me/${esc(state.bot.username)}</b>. Sobald sie auf „Start“ tippen, erscheinen sie hier automatisch.</span>`
+      : '<span class="muted">Verbinde zuerst oben deinen Telegram-Bot.</span>')
+    : t.pos ? `📍 <b>${esc(t.pos.label || 'Standort')}</b><br><span class="muted">${ll(t.pos)} · Stand ${fmtClock(new Date(t.pos.time))}${Date.now() - t.pos.time > STALE_MS ? ' ⚠️ älter als 45 min' : ''} · Chat-ID ${esc(t.chatId || '–')}</span>`
+      : `<span class="muted">Noch kein Standort für ${esc(t.name)}. Am besten teilt das Team im Bot-Chat seinen Live-Standort.</span>`;
+  const free = Object.entries(state.knownChats).filter(([id]) => !teamByChat(id));
+  $('#freeChats').innerHTML = free.length ? '<p class="muted">Chats ohne Team:</p>' + free.map(([id, name]) =>
+    `<button data-id="${esc(id)}">➕ ${esc(name)} <span class="muted">· ${esc(id)}</span></button>`).join('') : '';
+  $('#freeChats').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const t2 = createTeam(state.knownChats[b.dataset.id], b.dataset.id);
+    selectTeam(t2.id);
+  });
+
+  const d = t && t.dest;
+  $('#destBox').innerHTML = d ? `🏁 <b>${esc(d.label || 'Ziel')}</b> <span class="muted">${ll(d)}</span> <button id="destDel" style="padding:1px 7px">✕</button>`
+    : '<span class="muted">Noch kein Ziel. Klick-Modus auf „Ziel“ stellen, oben suchen, oder das Team schreibt „/ziel Ort“.</span>';
+  if (d) $('#destDel').onclick = () => { t.dest = null; clearRoute(); changed(); };
+  $('#wpBox').innerHTML = t ? t.waypoints.map((w, i) => `<div class="wp"><span>${i + 1}. ${esc(w.label || ll(w))}</span><button data-i="${i}">✕</button></div>`).join('') : '';
+  $('#wpBox').querySelectorAll('button').forEach(b => b.onclick = () => { t.waypoints.splice(+b.dataset.i, 1); clearRoute(); changed(); });
+
+  const unread = state.teams.reduce((n, x) => n + (x.unread || 0), 0);
+  document.title = (unread ? `(${unread}) ` : '') + 'CYMI Support-Zentrale';
+  drawMarks();
+}
+
+function changed() {
+  save();
+  renderTeams();
+  autoMessage();
+}
+
+function clearRoute() {
+  route = null;
+  layers.route.clearLayers();
+  $('#routeBox').innerHTML = '';
+}
+
+function selectTeam(id) {
+  state.activeId = id;
+  pois = []; selected.clear(); weather = null;
+  clearRoute();
+  layers.pois.clearLayers();
+  $('#poiBox').innerHTML = ''; $('#wxBox').innerHTML = '';
+  msgDirty = false;
+  const t = activeTeam();
+  if (t) t.unread = 0;
+  changed();
+  renderInbox();
+  if (t && t.pos) map.setView([t.pos.lat, t.pos.lon], Math.max(map.getZoom(), 12));
+}
+
+async function setPoint(target, p, label) {
+  const t = activeTeam();
+  if (!t) return status('Erst ein Team auswählen.', true);
+  p = { lat: p.lat, lon: p.lon, label: label || null, time: Date.now() };
+  if (target === 'pos') t.pos = p;
+  else if (target === 'dest') t.dest = p;
+  else t.waypoints.push(p);
+  clearRoute();
+  changed();
+  if (!label) {
+    const name = await reverseLabel(p);
+    if (name) { p.label = name; changed(); }
+  }
+}
+
+$('#teamAdd').onclick = () => {
+  const name = $('#teamName').value.trim();
+  if (!name) return status('Teamname fehlt.', true);
+  const t = createTeam(name, $('#teamChat').value.trim());
+  $('#teamName').value = ''; $('#teamChat').value = '';
+  selectTeam(t.id);
+};
+$('#teamDel').onclick = () => {
+  const t = activeTeam();
+  if (!t || !confirm(`Team „${t.name}“ löschen? Kommt aus dem Chat neue Post, wird es wieder angelegt, solange „neue Chats = neues Team“ an ist.`)) return;
+  state.teams = state.teams.filter(x => x !== t);
+  state.inbox = state.inbox.filter(m => String(m.chatId) !== String(t.chatId));
+  selectTeam(state.teams[0] ? state.teams[0].id : null);
+};
+$('#teamSel').onchange = e => selectTeam(e.target.value);
+
+$('#qGo').onclick = () => busy($('#qGo'), async () => {
+  const s = $('#q').value.trim(), target = $('#qTarget').value;
+  if (!s) return;
+  const c = parseCoords(s);
+  if (c) {
+    $('#qResults').innerHTML = '';
+    await setPoint(target, c);
+    map.setView([c.lat, c.lon], 13);
+    return;
+  }
+  const res = await geocode(s);
+  if (!res.length) return status('Nichts gefunden.', true);
+  $('#qResults').innerHTML = res.map((r, i) => `<button data-i="${i}">${esc(r.full)}</button>`).join('');
+  $('#qResults').querySelectorAll('button').forEach(b => b.onclick = () => {
+    const r = res[+b.dataset.i];
+    $('#qResults').innerHTML = '';
+    setPoint(target, r, r.label);
+    map.setView([r.lat, r.lon], 13);
+  });
+});
+$('#q').addEventListener('keydown', e => { if (e.key === 'Enter') $('#qGo').click(); });
+
+// ---------- Route ----------
+
+async function calcRoute(optimize) {
+  const t = activeTeam();
+  if (!t || !t.pos) throw new Error('Kein Standort für das Team.');
+  if (!t.dest) throw new Error('Kein Ziel gesetzt.');
+  state.profile = $('#profile').value;
+  const res = await fetchRoute([t.pos, ...t.waypoints, t.dest], state.profile, optimize);
+  if (res.order) {
+    t.waypoints = res.order.map(i => t.waypoints[i]);
+    status('Zwischenziele neu sortiert.');
+  }
+  route = res.route;
+  layers.route.clearLayers();
+  const pl = L.polyline(route.coords, { color: '#db0a40', weight: 5, opacity: 0.8 }).addTo(layers.route);
+  map.fitBounds(pl.getBounds(), { padding: [30, 30] });
+  const legs = route.legs.length > 1 ? '<br>' + route.legs.map((l, i) => `Etappe ${i + 1}: ${fmtDist(l.distance)} · ${fmtDur(l.duration)}`).join('<br>') : '';
+  $('#routeBox').innerHTML = `<div class="box">🧭 <b>${fmtDist(route.distance)}</b> · ca. <b>${fmtDur(route.duration)}</b> (${PROFILES[route.profile].label})<br>
+    <span class="muted">Ankunft bei sofortiger Abfahrt ca. ${fmtClock(new Date(Date.now() + route.duration * 1000))}. Beim Trampen kommt die Wartezeit dazu.</span>${legs}</div>`;
+  changed();
+}
+$('#routeGo').onclick = () => busy($('#routeGo'), () => calcRoute(false));
+$('#routeOpt').onclick = () => busy($('#routeOpt'), () => calcRoute(true));
+$('#profile').onchange = () => { state.profile = $('#profile').value; save(); };
+$('#destAll').onclick = () => {
+  const t = activeTeam();
+  if (!t || !t.dest) return status('Das aktive Team hat noch kein Ziel.', true);
+  for (const x of state.teams) {
+    x.dest = { ...t.dest };
+    x.waypoints = t.waypoints.map(w => ({ ...w }));
+  }
+  changed();
+  status(`Ziel für ${state.teams.length} Teams übernommen.`);
+};
+
+// ---------- Orte ----------
+
+function renderCats() {
+  $('#catBox').innerHTML = Object.entries(CATS).map(([k, c]) =>
+    `<label class="chip"><input type="checkbox" value="${k}" ${state.cats.includes(k) ? 'checked' : ''}> ${c.icon} ${c.label}</label>`).join('');
+  $('#catBox').querySelectorAll('input').forEach(i => i.onchange = () => {
+    state.cats = [...$('#catBox').querySelectorAll('input:checked')].map(x => x.value);
+    save();
+  });
+}
+
+async function searchPois() {
+  const t = activeTeam();
+  const area = $('#area').value, radius = +$('#radius').value;
+  state.area = area; state.radius = radius; save();
+  if (!state.cats.length) throw new Error('Mindestens eine Kategorie wählen.');
+  let res;
+  if (area === 'route') {
+    if (!route) throw new Error('Erst eine Route berechnen.');
+    res = await findPois({ samples: route.samples, radius, cats: state.cats });
+  } else {
+    const center = area === 'dest' ? t && t.dest : t && t.pos;
+    if (!center) throw new Error(area === 'dest' ? 'Kein Ziel gesetzt.' : 'Kein Standort für das Team.');
+    res = await findPois({ center, radius, cats: state.cats });
+  }
+  pois = res;
+  poiArea = area;
+  selected.clear();
+  for (const c of state.cats) pois.filter(p => p.cat === c).slice(0, 3).forEach(p => selected.add(p.key));
+  renderPois();
+  status(`${pois.length} Orte gefunden.`);
+  autoMessage();
+}
+
+function poiInfo(p) {
+  const t = p.tags, bits = [];
+  const type = typeName(t);
+  if (type && type !== p.name) bits.push(type);
+  if (t.fee === 'no' || t['shower:fee'] === 'no') bits.push('kostenlos');
+  else if (t.fee === 'yes') bits.push('kostenpflichtig');
+  if (t.opening_hours) bits.push('⏰ ' + t.opening_hours);
+  if (t.seasonal && t.seasonal !== 'no') bits.push('saisonal');
+  if (t.access && ['private', 'customers', 'no'].includes(t.access)) bits.push('Zugang: ' + t.access);
+  return bits;
+}
+
+function distText(p) {
+  return p.km != null ? `km ${Math.round(p.km)} · ${fmtDist(p.dist)} neben Route` : fmtDist(p.dist);
+}
+
+function renderPois() {
+  layers.pois.clearLayers();
+  if (!pois.length) { $('#poiBox').innerHTML = '<p class="muted">Keine Treffer. Radius vergrößern?</p>'; return; }
+  let html = '';
+  for (const c of state.cats) {
+    const list = pois.filter(p => p.cat === c);
+    html += `<div class="cat-h">${CATS[c].icon} ${CATS[c].label} <span class="muted">(${list.length})</span></div>`;
+    if (!list.length) html += '<div class="muted">nichts gefunden</div>';
+    for (const p of list) {
+      html += `<div class="poi"><input type="checkbox" data-k="${esc(p.key)}" ${selected.has(p.key) ? 'checked' : ''}>
+        <span class="name" data-k="${esc(p.key)}">${esc(p.name)}</span>
+        <span class="meta">${esc(distText(p))}${poiInfo(p).length ? ' · ' + esc(poiInfo(p).join(' · ')) : ''}</span></div>`;
+      L.marker([p.lat, p.lon], { icon: pinIcon(CATS[c].icon, CATS[c].color) })
+        .bindPopup(`<b>${esc(p.name)}</b><br>${esc(distText(p))}<br>${esc(poiInfo(p).join(' · '))}<br><a href="${mapsWalk(p)}" target="_blank" rel="noopener">Google Maps</a>`)
+        .addTo(layers.pois);
+    }
+  }
+  $('#poiBox').innerHTML = html;
+  $('#poiBox').querySelectorAll('input').forEach(i => i.onchange = () => {
+    i.checked ? selected.add(i.dataset.k) : selected.delete(i.dataset.k);
+    autoMessage();
+  });
+  $('#poiBox').querySelectorAll('.name').forEach(n => n.onclick = () => {
+    const p = pois.find(x => x.key === n.dataset.k);
+    map.setView([p.lat, p.lon], 17);
+  });
+}
+$('#poiGo').onclick = () => busy($('#poiGo'), searchPois);
+$('#poiNone').onclick = () => { selected.clear(); renderPois(); autoMessage(); };
+
+// ---------- Wetter ----------
+
+async function loadWeather() {
+  const t = activeTeam();
+  if (!t || !t.pos) throw new Error('Kein Standort für das Team.');
+  const now = Date.now() / 1000;
+  const points = [{ kind: 'pos', label: 'Standort', lat: t.pos.lat, lon: t.pos.lon, eta: now }];
+  if (route) {
+    const total = route.distance / 1000;
+    for (const f of [0.2, 0.4, 0.6, 0.8]) {
+      const s = route.samples.reduce((a, b) => Math.abs(b.km - f * total) < Math.abs(a.km - f * total) ? b : a);
+      if (s.km === 0 || s.km >= total || points.some(p => p.km === s.km)) continue;
+      points.push({ kind: 'way', km: s.km, label: `km ${Math.round(s.km)}`, lat: s.lat, lon: s.lon, eta: now + route.duration * (s.km / total) });
+    }
+  }
+  if (t.dest) points.push({ kind: 'dest', label: 'Ziel', lat: t.dest.lat, lon: t.dest.lon, eta: now + (route ? route.duration : 0) });
+  weather = { points: await fetchWeather(points) };
+  renderWeather();
+  autoMessage();
+}
+
 function renderWeather() {
   if (!weather) { $('#wxBox').innerHTML = ''; return; }
   $('#wxBox').innerHTML = weather.points.map(p => {
@@ -796,28 +951,26 @@ function renderWeather() {
 }
 $('#wxGo').onclick = () => busy($('#wxGo'), loadWeather);
 
-// ---------- Nachricht ----------
+// ---------- Update-Nachricht ----------
 
 function buildMessage() {
   const t = activeTeam();
   if (!t) return '';
   const out = [];
   out.push(`🥫 ${t.name} – Update ${fmtClock(new Date())}`);
-  if (t.pos) {
-    out.push(`📍 Euer Standort: ${t.pos.label || ll(t.pos)}`);
-  }
-  if ($('#incRoute').checked && state.dest) {
+  if (t.pos) out.push(`📍 Euer Standort: ${t.pos.label || ll(t.pos)}`);
+  if ($('#incRoute').checked && t.dest) {
     out.push('');
-    out.push(`🏁 Ziel: ${state.dest.label || ll(state.dest)}`);
+    out.push(`🏁 Ziel: ${t.dest.label || ll(t.dest)}`);
     if (route) {
-      const via = state.waypoints.length ? ` über ${state.waypoints.map(w => w.label || ll(w)).join(' → ')}` : '';
+      const via = t.waypoints.length ? ` über ${t.waypoints.map(w => w.label || ll(w)).join(' → ')}` : '';
       out.push(`🧭 ${fmtDist(route.distance)} · ca. ${fmtDur(route.duration)} (${PROFILES[route.profile].label})${via}`);
     } else if (t.pos) {
-      out.push(`📏 Luftlinie ${fmtDist(haversine(t.pos, state.dest))}`);
+      out.push(`📏 Luftlinie ${fmtDist(haversine(t.pos, t.dest))}`);
     }
     if (t.pos) {
-      out.push(`Navi: ${mapsDir(t.pos, state.dest, state.waypoints, PROFILES[route ? route.profile : state.profile].gmaps)}`);
-      out.push(`Bus & Bahn: ${mapsDir(t.pos, state.dest, [], 'transit')}`);
+      out.push(`Navi: ${mapsDir(t.pos, t.dest, t.waypoints, PROFILES[route ? route.profile : state.profile].gmaps)}`);
+      out.push(`Bus & Bahn: ${mapsDir(t.pos, t.dest, [], 'transit')}`);
     }
   }
   if ($('#incWx').checked && weather) {
@@ -866,16 +1019,10 @@ $('#copy').onclick = async () => {
   catch (e) { $('#msg').select(); status('Bitte manuell kopieren (Strg+C).', true); }
 };
 
-// ---------- Telegram ----------
+// ---------- Telegram: Grundfunktionen ----------
 
-$('#token').value = state.token;
-$('#token').addEventListener('change', () => { state.token = $('#token').value.trim(); save(); });
-$('#tokenShow').onclick = () => { const i = $('#token'); i.type = i.type === 'password' ? 'text' : 'password'; };
-
-async function tg(method, params = {}, fireAndForget = false) {
-  if (!state.token) throw new Error('Bot-Token fehlt (Abschnitt 5).');
-  const body = new URLSearchParams();
-  for (const [k, v] of Object.entries(params)) body.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+async function tgCall(method, body, fireAndForget) {
+  if (!state.token) throw new Error('Bot-Token fehlt (Abschnitt 0).');
   const url = `${TELEGRAM}/bot${state.token}/${method}`;
   try {
     const r = await fetch(url, { method: 'POST', body });
@@ -890,6 +1037,12 @@ async function tg(method, params = {}, fireAndForget = false) {
   }
 }
 
+function tg(method, params = {}, fireAndForget = false) {
+  const body = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) body.set(k, typeof v === 'object' ? JSON.stringify(v) : String(v));
+  return tgCall(method, body, fireAndForget);
+}
+
 function chunks(text, max = 3900) {
   const out = [];
   let cur = '';
@@ -901,100 +1054,435 @@ function chunks(text, max = 3900) {
   return out;
 }
 
-$('#send').onclick = () => busy($('#send'), async () => {
-  const t = activeTeam();
-  if (!t) throw new Error('Kein Team gewählt.');
-  if (!t.chatId) throw new Error(`Für ${t.name} ist keine Chat-ID hinterlegt.`);
-  const text = $('#msg').value.trim();
-  if (!text) throw new Error('Nachricht ist leer.');
+// dir: 'out' = von dir, 'bot' = automatische Antwort
+async function sendText(chatId, text, dir = 'out', extra = {}) {
+  const parts = chunks(text);
   let unconfirmed = false;
-  for (const part of chunks(text)) {
-    const r = await tg('sendMessage', { chat_id: t.chatId, text: part, link_preview_options: { is_disabled: true } }, true);
+  for (let i = 0; i < parts.length; i++) {
+    const params = { chat_id: chatId, text: parts[i], link_preview_options: { is_disabled: true } };
+    if (i === parts.length - 1) Object.assign(params, extra);
+    const r = await tg('sendMessage', params, true);
     unconfirmed = unconfirmed || !!r.unconfirmed;
   }
-  if ($('#incPins').checked) {
-    for (const p of pois.filter(x => selected.has(x.key))) {
-      await tg('sendVenue', { chat_id: t.chatId, latitude: p.lat, longitude: p.lon,
-        title: `${CATS[p.cat].icon} ${p.name}`.slice(0, 64), address: [distText(p), ...poiInfo(p)].join(' · ').slice(0, 200) }, true);
-    }
-  }
-  status(unconfirmed ? 'Abgeschickt (Browser konnte die Zustellung nicht bestätigen).' : `An ${t.name} gesendet ✅`);
-});
+  logMsg({ chatId, dir, type: 'text', text });
+  return !unconfirmed;
+}
 
-async function pullUpdates() {
-  let got = 0;
-  for (let round = 0; round < 10; round++) {
-    const ups = await tg('getUpdates', { offset: state.tgOffset || 0, limit: 100, timeout: 0 });
-    if (!ups.length) break;
-    for (const u of ups) {
-      state.tgOffset = u.update_id + 1;
-      const m = u.message || u.edited_message || u.channel_post || u.edited_channel_post;
-      if (!m || !m.chat) continue;
-      const c = m.chat;
-      state.knownChats[c.id] = c.title || [c.first_name, c.last_name].filter(Boolean).join(' ') || c.username || String(c.id);
-      if (m.location) {
-        const time = (m.edit_date || m.date) * 1000;
-        const prev = state.lastLoc[c.id];
-        if (!prev || prev.time <= time) state.lastLoc[c.id] = { lat: m.location.latitude, lon: m.location.longitude, time };
-      }
-      got++;
-    }
-    if (ups.length < 100) break;
+async function sendVenue(chatId, p, dir = 'out') {
+  const title = `${CATS[p.cat].icon} ${p.name}`.slice(0, 64);
+  await tg('sendVenue', { chat_id: chatId, latitude: p.lat, longitude: p.lon, title,
+    address: [distText(p), ...poiInfo(p)].join(' · ').slice(0, 200) }, true);
+  logMsg({ chatId, dir, type: 'location', lat: p.lat, lon: p.lon, text: title });
+}
+
+function fileKind(file) {
+  if (file.type.startsWith('image/') && !file.type.includes('gif') && file.size < 10e6) return ['sendPhoto', 'photo', 'photo'];
+  if (file.type.startsWith('video/')) return ['sendVideo', 'video', 'video'];
+  if (file.type === 'audio/ogg') return ['sendVoice', 'voice', 'audio'];
+  if (file.type.startsWith('audio/')) return ['sendAudio', 'audio', 'audio'];
+  return ['sendDocument', 'document', 'document'];
+}
+
+async function sendFile(chatId, file, caption, dir = 'out') {
+  const [method, field, type] = fileKind(file);
+  const fd = new FormData();
+  fd.append('chat_id', chatId);
+  fd.append(field, file, file.name);
+  if (caption) fd.append('caption', caption.slice(0, 1000));
+  const r = await tgCall(method, fd, true);
+  let fileId = null;
+  if (r.photo) fileId = r.photo[r.photo.length - 1].file_id;
+  else if (r[field]) fileId = r[field].file_id;
+  logMsg({ chatId, dir, type, fileId, name: file.name, text: caption || '' });
+}
+
+// ---------- Telegram: Verbindung & Empfang ----------
+
+let polling = false;
+let connState = 'off';
+
+function setConn(s, info) {
+  connState = s;
+  const pill = $('#connPill');
+  pill.className = 'badge' + (s === 'ok' ? ' ok' : s === 'err' ? ' err' : '');
+  pill.textContent = s === 'ok' ? `● live${state.bot ? ' · @' + state.bot.username : ''}` : s === 'err' ? '● Fehler' : s === 'idle' ? '● verbunden' : 'offline';
+  pill.title = info || '';
+}
+
+function renderConn() {
+  $('#token').value = state.token;
+  $('#optLive').checked = state.live;
+  $('#optAutoTeams').checked = state.autoTeams;
+  $('#optAutoReply').checked = state.autoReply;
+  $('#tokenRow').classList.toggle('hidden', !!state.bot);
+  $('#botInfo').innerHTML = state.bot
+    ? `<div class="box">✅ Verbunden mit <b>@${esc(state.bot.username)}</b><br>
+       <span class="muted">Diesen Link an deine Teams schicken – nach „Start“ sind sie automatisch drin:</span><br>
+       <b>https://t.me/${esc(state.bot.username)}</b>
+       <div class="row" style="margin-top:6px"><button id="copyLink">Link kopieren</button><button id="tokenChange">Token ändern</button></div></div>`
+    : '';
+  if (state.bot) {
+    $('#copyLink').onclick = () => navigator.clipboard.writeText(`https://t.me/${state.bot.username}`).then(() => status('Link kopiert.'), () => status('Kopieren nicht möglich.', true));
+    $('#tokenChange').onclick = () => { state.bot = null; save(); renderConn(); setConn('off'); };
   }
+}
+
+async function connect() {
+  const me = await tg('getMe');
+  state.bot = { username: me.username, name: me.first_name };
   save();
-  const moved = applyLocations();
-  return { got, moved };
+  renderConn();
+  setConn('idle');
+  // Befehlsmenü im Telegram-Chat ("/") einrichten
+  tg('setMyCommands', { commands: Object.values(ACTIONS).map(a => ({ command: a.cmd, description: a.desc })) }).catch(() => {});
+  if (state.live) pollLoop();
 }
 
-// Neueste Telegram-Position den Teams zuordnen
-function applyLocations() {
-  let moved = false;
-  for (const t of state.teams) {
-    const loc = t.chatId && state.lastLoc[t.chatId];
-    if (loc && (!t.pos || t.pos.time < loc.time)) {
-      t.pos = { lat: loc.lat, lon: loc.lon, label: null, time: loc.time };
-      moved = true;
-      reverseLabel(t.pos).then(n => { if (n) { t.pos.label = n; changed(); } });
+$('#token').addEventListener('change', () => { state.token = $('#token').value.trim(); save(); });
+$('#tokenShow').onclick = () => { const i = $('#token'); i.type = i.type === 'password' ? 'text' : 'password'; };
+$('#connect').onclick = () => busy($('#connect'), async () => {
+  state.token = $('#token').value.trim();
+  if (!state.token) throw new Error('Bitte Token eintragen.');
+  save();
+  await connect();
+  status(`Verbunden mit @${state.bot.username} ✅`);
+});
+$('#optLive').onchange = e => { state.live = e.target.checked; save(); if (state.live && state.bot) pollLoop(); else setConn(state.bot ? 'idle' : 'off'); };
+$('#optAutoTeams').onchange = e => { state.autoTeams = e.target.checked; save(); };
+$('#optAutoReply').onchange = e => { state.autoReply = e.target.checked; save(); };
+
+async function pollLoop() {
+  if (polling) return;
+  polling = true;
+  let failures = 0;
+  while (state.live && state.token && state.bot) {
+    const started = Date.now();
+    try {
+      const ups = await tg('getUpdates', { offset: state.tgOffset || 0, limit: 100, timeout: 25,
+        allowed_updates: ['message', 'edited_message'] });
+      setConn('ok');
+      failures = 0;
+      for (const u of ups) {
+        state.tgOffset = u.update_id + 1;
+        try { handleUpdate(u); } catch (e) { console.error(e); }
+      }
+      if (ups.length) save();
+      if (!ups.length && Date.now() - started < 1000) await sleep(1000);
+    } catch (e) {
+      failures++;
+      setConn('err', e.message);
+      if (/webhook/i.test(e.message)) {
+        if (confirm('Für diesen Bot ist ein Webhook eingerichtet. Entfernen, damit diese Seite die Nachrichten empfangen kann?')) {
+          await tg('deleteWebhook').catch(() => {});
+          continue;
+        }
+        state.live = false; save(); renderConn();
+        break;
+      }
+      if (/terminated by other getUpdates/i.test(e.message)) status('Die Seite ist noch in einem anderen Tab offen – bitte nur einen Tab nutzen.', true);
+      else if (/Unauthorized/i.test(e.message)) { status('Token ungültig.', true); state.bot = null; save(); renderConn(); break; }
+      await sleep(Math.min(30000, 3000 * failures));
     }
   }
-  if (moved) changed();
-  return moved;
+  polling = false;
+  if (connState === 'ok') setConn(state.bot ? 'idle' : 'off');
 }
 
-$('#tgPos').onclick = () => busy($('#tgPos'), async () => {
-  const t = activeTeam();
-  if (!t || !t.chatId) throw new Error('Team mit Chat-ID wählen.');
-  await pullUpdates();
-  const loc = state.lastLoc[t.chatId];
-  if (!loc) throw new Error('Noch keine Position von diesem Chat. Das Team muss dem Bot einen (Live-)Standort schicken.');
-  map.setView([loc.lat, loc.lon], 14);
-  status(`Position von ${fmtClock(new Date(loc.time))} übernommen.`);
-});
+function chatName(c) {
+  return c.title || [c.first_name, c.last_name].filter(Boolean).join(' ') || c.username || String(c.id);
+}
 
-let pullTimer = null;
-$('#autoPull').onchange = e => {
-  clearInterval(pullTimer);
-  if (e.target.checked) pullTimer = setInterval(() => pullUpdates().catch(err => status(err.message, true)), 60000);
+function describe(m) {
+  const cap = m.caption || '';
+  if (m.photo) return { type: 'photo', fileId: m.photo[m.photo.length - 1].file_id, text: cap };
+  if (m.video || m.animation || m.video_note) return { type: 'video', fileId: (m.video || m.animation || m.video_note).file_id, text: cap };
+  if (m.voice || m.audio) return { type: 'audio', fileId: (m.voice || m.audio).file_id, text: cap };
+  if (m.document) return { type: 'document', fileId: m.document.file_id, name: m.document.file_name, text: cap };
+  if (m.location) return { type: 'location', lat: m.location.latitude, lon: m.location.longitude, text: m.location.live_period ? 'Live-Standort geteilt' : 'Standort' };
+  if (m.sticker) return { type: 'text', text: m.sticker.emoji || '[Sticker]' };
+  if (m.text) return { type: 'text', text: m.text };
+  return { type: 'text', text: '[Nachrichtentyp wird nicht angezeigt]' };
+}
+
+function handleUpdate(u) {
+  const edited = !!u.edited_message;
+  const m = u.message || u.edited_message;
+  if (!m || !m.chat || m.chat.type === 'channel') return;
+  const chatId = String(m.chat.id);
+  state.knownChats[chatId] = chatName(m.chat);
+  let team = teamByChat(chatId);
+  if (!team && state.autoTeams && !edited) {
+    team = createTeam(chatName(m.chat), chatId);
+    status(`Neues Team: ${team.name}`);
+  }
+
+  if (m.location && team) updateTeamPos(team, m.location, (m.edit_date || m.date) * 1000);
+  if (edited) { if (team) changed(); return; }   // Live-Standort-Aktualisierungen nicht in den Posteingang
+
+  const from = m.chat.type === 'private' ? '' : (m.from && m.from.first_name) || '';
+  logMsg({ chatId, dir: 'in', from, ...describe(m) });
+  if (team) {
+    if (team.id !== state.activeId) team.unread = (team.unread || 0) + 1;
+    notify(team.name, describe(m).text || 'neue Nachricht');
+  }
+  changed();
+  if (team && state.autoReply) handleCommand(team, m);
+}
+
+function updateTeamPos(team, loc, time) {
+  if (team.pos && team.pos.time > time) return;
+  const p = { lat: loc.latitude, lon: loc.longitude, time, label: null };
+  const moved = !team.pos || haversine(team.pos, p) > 300;
+  if (!team.pos && team.id === state.activeId) map.setView([p.lat, p.lon], 13);
+  if (!moved) p.label = team.pos.label;
+  team.pos = p;
+  if (moved) reverseLabel(p).then(n => { if (n) { p.label = n; changed(); } });
+  if (team.id === state.activeId && route) clearRoute();
+}
+
+function notify(title, body) {
+  try {
+    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body });
+  } catch (e) { /* ignorieren */ }
+}
+$('#notifyBtn').onclick = async () => {
+  if (!('Notification' in window)) return status('Dieser Browser kann keine Benachrichtigungen.', true);
+  const p = await Notification.requestPermission();
+  status(p === 'granted' ? 'Benachrichtigungen an – du wirst bei neuen Nachrichten informiert.' : 'Benachrichtigungen wurden nicht erlaubt.', p !== 'granted');
 };
 
-$('#tgChats').onclick = () => busy($('#tgChats'), async () => {
-  await pullUpdates();
-  const entries = Object.entries(state.knownChats);
-  if (!entries.length) {
-    $('#chatBox').innerHTML = '<p class="muted">Noch keine Chats. Das Team soll dem Bot (oder in der Gruppe mit dem Bot) einmal eine Nachricht schreiben, dann nochmal klicken.</p>';
+// ---------- Posteingang ----------
+
+let msgSeq = Date.now();
+function logMsg(entry) {
+  state.inbox.push({ id: msgSeq++, time: Date.now(), ...entry, chatId: String(entry.chatId) });
+  if (state.inbox.length > INBOX_MAX) state.inbox.splice(0, state.inbox.length - INBOX_MAX);
+  save();
+  const t = activeTeam();
+  if (t && String(t.chatId) === String(entry.chatId)) renderInbox();
+}
+
+const fileUrls = new Map();
+function fileUrl(fileId) {
+  if (!fileUrls.has(fileId)) {
+    fileUrls.set(fileId, tg('getFile', { file_id: fileId }).then(f => `${TELEGRAM}/file/bot${state.token}/${f.file_path}`));
+  }
+  return fileUrls.get(fileId);
+}
+
+function linkify(s) {
+  return esc(s).replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${u.length > 50 ? u.slice(0, 47) + '…' : u}</a>`);
+}
+
+function renderInbox() {
+  const t = activeTeam();
+  const box = $('#inbox');
+  const list = t && t.chatId ? state.inbox.filter(m => m.chatId === String(t.chatId)).slice(-60) : [];
+  const badge = $('#inboxBadge');
+  const unread = state.teams.filter(x => x !== t).reduce((n, x) => n + (x.unread || 0), 0);
+  badge.textContent = unread ? `${unread} neu bei anderen Teams` : '';
+  badge.className = 'badge new' + (unread ? '' : ' hidden');
+  if (!list.length) {
+    box.innerHTML = `<p class="muted">${t ? 'Noch keine Nachrichten mit diesem Team.' : 'Kein Team ausgewählt.'}</p>`;
     return;
   }
-  $('#chatBox').innerHTML = '<p class="muted">Klick übernimmt die Chat-ID für das ausgewählte Team:</p>'
-    + entries.map(([id, name]) => `<button data-id="${esc(id)}">${esc(name)} <span class="muted">· ${esc(id)}</span></button>`).join('');
-  $('#chatBox').querySelectorAll('button').forEach(b => b.onclick = () => {
-    const t = activeTeam();
-    if (!t) return status('Erst ein Team anlegen.', true);
-    t.chatId = b.dataset.id;
-    applyLocations();
-    changed();
-    status(`Chat-ID für ${t.name} gesetzt.`);
+  box.innerHTML = list.map(m => {
+    const who = m.dir === 'in' ? (m.from || t.name) : m.dir === 'bot' ? '🤖 Bot (automatisch)' : 'Du';
+    let body = '';
+    if (m.type === 'photo') body = m.fileId ? `<img data-file="${esc(m.fileId)}" alt="Foto">` : `🖼 ${esc(m.name || 'Foto')}`;
+    else if (m.type === 'video') body = m.fileId ? `<video controls preload="none" data-file="${esc(m.fileId)}"></video>` : `🎬 ${esc(m.name || 'Video')}`;
+    else if (m.type === 'audio') body = m.fileId ? `<audio controls preload="none" data-file="${esc(m.fileId)}"></audio>` : `🎵 ${esc(m.name || 'Audio')}`;
+    else if (m.type === 'document') body = m.fileId ? `<a data-file="${esc(m.fileId)}" target="_blank" rel="noopener">📄 ${esc(m.name || 'Datei')}</a>` : `📄 ${esc(m.name || 'Datei')}`;
+    else if (m.type === 'location') body = `📍 ${esc(m.text)} <a href="#" data-lat="${m.lat}" data-lon="${m.lon}">auf Karte</a>`;
+    if (m.type !== 'location' && m.text) body += (body ? '\n' : '') + linkify(m.text);
+    return `<div class="msg ${m.dir}"><div class="meta">${esc(who)} · ${fmtClock(new Date(m.time))}</div>${body}</div>`;
+  }).join('');
+  box.querySelectorAll('[data-file]').forEach(el => {
+    fileUrl(el.dataset.file).then(u => {
+      if (el.tagName === 'A') el.href = u;
+      else el.src = u;
+      if (el.tagName === 'IMG') el.onclick = () => window.open(u, '_blank', 'noopener');
+    }).catch(() => { el.replaceWith(document.createTextNode('(Datei nicht abrufbar – evtl. größer als 20 MB)')); });
   });
+  box.querySelectorAll('[data-lat]').forEach(a => a.onclick = e => { e.preventDefault(); map.setView([+a.dataset.lat, +a.dataset.lon], 16); });
+  box.scrollTop = box.scrollHeight;
+}
+
+$('#quickSend').onclick = () => busy($('#quickSend'), async () => {
+  const t = activeTeam(), text = $('#quick').value.trim();
+  if (!t || !t.chatId) throw new Error('Team mit Chat-ID wählen.');
+  if (!text) return;
+  await sendText(t.chatId, text);
+  $('#quick').value = '';
 });
+$('#quick').addEventListener('keydown', e => { if (e.key === 'Enter') $('#quickSend').click(); });
+
+// ---------- Update senden (Text, Pins, Dateien) ----------
+
+$('#send').onclick = () => busy($('#send'), async () => {
+  const toAll = $('#toAll').checked;
+  const targets = toAll ? state.teams.filter(t => t.chatId) : [activeTeam()].filter(Boolean);
+  if (!targets.length) throw new Error('Kein Team mit Chat-ID.');
+  if (!toAll && !targets[0].chatId) throw new Error(`Für ${targets[0].name} ist keine Chat-ID hinterlegt.`);
+  if (toAll && !confirm(`Gleiche Nachricht an ${targets.length} Teams senden?`)) return;
+  const text = $('#msg').value.trim();
+  const files = [...$('#files').files];
+  if (!text && !files.length) throw new Error('Nichts zu senden.');
+  let ok = true;
+  for (const t of targets) {
+    if (text) ok = (await sendText(t.chatId, text)) && ok;
+    if ($('#incPins').checked && !toAll) {
+      for (const p of pois.filter(x => selected.has(x.key))) await sendVenue(t.chatId, p);
+    }
+    for (const f of files) await sendFile(t.chatId, f);
+  }
+  $('#files').value = '';
+  status(ok ? `Gesendet an ${targets.map(t => t.name).join(', ')} ✅` : 'Abgeschickt (Browser konnte die Zustellung nicht bestätigen).');
+});
+
+// ---------- Automatische Bot-Antworten ----------
+
+let botQueue = Promise.resolve();
+function enqueue(fn) {
+  botQueue = botQueue.then(fn).catch(e => console.error('Bot:', e));
+}
+
+function parseAction(text) {
+  const raw = text.trim();
+  const isCmd = raw.startsWith('/');
+  const clean = raw.replace(/^\//, '').replace(/@\w+/, '').toLowerCase();
+  const words = clean.replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return null;
+  if (words[0] === 'ziel') return { act: 'setdest', arg: raw.replace(/^\/?ziel(@\w+)?\s*/i, '').trim() };
+  // Längere Freitexte gehen nur an dich, nicht an den Bot
+  if (!isCmd && words.length > 3) return null;
+  for (const [k, a] of Object.entries(ACTIONS)) if (a.words.includes(words[0])) return { act: k };
+  return null;
+}
+
+function handleCommand(team, m) {
+  if (m.location) {
+    if (!team.greetedLoc) {
+      team.greetedLoc = true;
+      enqueue(() => sendText(team.chatId, '📍 Standort ist angekommen, danke! Tippt unten auf einen Knopf, wenn ihr etwas sucht.', 'bot', { reply_markup: KEYBOARD }));
+    }
+    return;
+  }
+  const a = m.text && parseAction(m.text);
+  if (a) enqueue(() => runAction(team, a));
+}
+
+async function needPos(team) {
+  if (team.pos) return false;
+  await sendText(team.chatId, '📍 Ich kenne euren Standort noch nicht. Tippt auf „📍 Standort senden“ oder teilt euren Live-Standort (📎 → Standort → Live-Standort).', 'bot', { reply_markup: KEYBOARD });
+  return true;
+}
+
+function staleNote(team) {
+  return Date.now() - team.pos.time > STALE_MS ? `\n⚠️ Euer letzter Standort ist von ${fmtClock(new Date(team.pos.time))} – schickt am besten einen neuen.` : '';
+}
+
+async function runAction(team, { act, arg }) {
+  const chatId = team.chatId;
+  if (act === 'help') {
+    const name = state.bot ? state.bot.name : 'Support-Bot';
+    return sendText(chatId, `👋 Hi ${team.name}! Ich bin ${name}, euer Support-Bot.\n\n`
+      + '1️⃣ Teilt euren Live-Standort: 📎 → Standort → „Live-Standort teilen“ (8 Stunden).\n'
+      + '2️⃣ Tippt dann einfach auf die Knöpfe unten:\n'
+      + '💧 Wasser · 🚿 Dusche · 🚻 WC · 🛏 Schlafen · 🍞 Essen · ⛽ Trampen · 📶 WLAN · 🚉 Bahnhof · 💊 Apotheke · 🌦 Wetter · 🧭 Route\n'
+      + '3️⃣ „/ziel Berlin“ setzt euer nächstes Ziel.\n\n'
+      + 'Alles andere – Fragen, Fotos, Videos – landet direkt bei eurem Supporter. Ihr schafft das! 💪', 'bot', { reply_markup: KEYBOARD });
+  }
+  tg('sendChatAction', { chat_id: chatId, action: 'find_location' }).catch(() => {});
+
+  if (ACTIONS[act] && ACTIONS[act].cats) {
+    if (await needPos(team)) return;
+    const cats = ACTIONS[act].cats;
+    let res = [], radius = 0;
+    for (const r of BOT_RADII) {
+      radius = r;
+      res = (await findPois({ center: team.pos, radius: r, cats })).sort((a, b) => a.dist - b.dist);
+      if (res.length >= 3) break;
+    }
+    const title = cats.map(c => CATS[c].icon + ' ' + CATS[c].label).join(' / ');
+    if (!res.length) {
+      return sendText(chatId, `${title}: leider nichts im Umkreis von ${fmtDist(radius)} gefunden 😕 Fragt am besten Einheimische!${staleNote(team)}`, 'bot');
+    }
+    const lines = [`${title} in eurer Nähe (Umkreis ${fmtDist(radius)}):`];
+    res.slice(0, 5).forEach((p, i) => {
+      const info = poiInfo(p);
+      lines.push('', `${i + 1}. ${CATS[p.cat].icon} ${p.name} – ${fmtDist(p.dist)}${info.length ? ' – ' + info.join(', ') : ''}`, mapsWalk(p));
+    });
+    await sendText(chatId, lines.join('\n') + staleNote(team), 'bot');
+    return sendVenue(chatId, res[0], 'bot');
+  }
+
+  if (act === 'weather') {
+    if (await needPos(team)) return;
+    const now = Date.now() / 1000;
+    const pts = [{ kind: 'pos', lat: team.pos.lat, lon: team.pos.lon, eta: now }];
+    if (team.dest) pts.push({ kind: 'dest', lat: team.dest.lat, lon: team.dest.lon, eta: now });
+    await fetchWeather(pts);
+    const s = wxSummary(pts[0]);
+    const lines = ['🌦 Wetter bei euch', ...s.lines];
+    if (s.warn.length) lines.push('⚠️ ' + s.warn.join(' · '));
+    if (pts[1]) lines.push('', `🏁 Am Ziel (${team.dest.label || 'Ziel'}): ${wxSummary(pts[1]).lines[0]}`);
+    return sendText(chatId, lines.join('\n') + staleNote(team), 'bot');
+  }
+
+  if (act === 'setdest') {
+    if (!arg) {
+      return sendText(chatId, team.dest ? `🏁 Euer Ziel: ${team.dest.label || ll(team.dest)}\nÄndern mit „/ziel Ort“.` : 'Noch kein Ziel. Schreibt z. B. „/ziel Berlin Hauptbahnhof“.', 'bot');
+    }
+    const res = await geocode(arg, 1);
+    if (!res.length) return sendText(chatId, `🤔 „${arg}“ habe ich nicht gefunden. Versucht es genauer, z. B. mit Stadt und Land.`, 'bot');
+    team.dest = { lat: res[0].lat, lon: res[0].lon, label: res[0].label, time: Date.now() };
+    team.waypoints = [];
+    if (team.id === state.activeId) clearRoute();
+    changed();
+    await sendText(chatId, `🏁 Ziel gesetzt: ${res[0].full}`, 'bot');
+    if (!team.pos) return;
+    act = 'route';
+  }
+
+  if (act === 'route') {
+    if (await needPos(team)) return;
+    if (!team.dest) return sendText(chatId, 'Noch kein Ziel. Schreibt z. B. „/ziel Berlin“ oder wartet auf euren Supporter.', 'bot');
+    const { route: r } = await fetchRoute([team.pos, ...team.waypoints, team.dest], 'car', false);
+    const eta = Date.now() / 1000 + r.duration;
+    const wx = await fetchWeather([{ kind: 'dest', lat: team.dest.lat, lon: team.dest.lon, eta }]).catch(() => null);
+    const lines = [`🧭 Route nach ${team.dest.label || 'Ziel'}`,
+      `${fmtDist(r.distance)} · ca. ${fmtDur(r.duration)} mit dem Auto (+ Wartezeit beim Trampen)`,
+      '', `🚗 Navi: ${mapsDir(team.pos, team.dest, team.waypoints, 'driving')}`,
+      `🚆 Bus & Bahn: ${mapsDir(team.pos, team.dest, [], 'transit')}`];
+    if (wx) lines.push('', `🌦 Wetter bei Ankunft: ${wxSummary(wx[0]).lines[0]}`);
+    return sendText(chatId, lines.join('\n') + staleNote(team), 'bot');
+  }
+}
+
+// ---------- Backup ----------
+
+$('#backupOut').onclick = () => {
+  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `cymi-support-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  status('Backup gespeichert – enthält dein Bot-Token, also nicht weitergeben!');
+};
+$('#backupIn').onclick = () => $('#backupFile').click();
+$('#backupFile').onchange = async e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  try {
+    const data = JSON.parse(await f.text());
+    localStorage.setItem(KEY, JSON.stringify(Object.assign(defaults(), data)));
+    location.reload();
+  } catch (err) {
+    status('Backup konnte nicht gelesen werden.', true);
+  }
+};
 
 // ---------- Start ----------
 
@@ -1002,11 +1490,17 @@ $('#profile').value = state.profile;
 $('#radius').value = String(state.radius);
 $('#area').value = state.area;
 renderCats();
+renderConn();
 if (!activeTeam() && state.teams.length) state.activeId = state.teams[0].id;
 renderTeams();
+renderInbox();
 autoMessage();
 const t0 = activeTeam();
 if (t0 && t0.pos) map.setView([t0.pos.lat, t0.pos.lon], 12);
+if (state.token && state.bot) {
+  setConn('idle');
+  connect().catch(e => { setConn('err', e.message); status(e.message, true); });
+}
 </script>
 </body>
 </html>

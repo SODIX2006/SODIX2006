@@ -1,54 +1,60 @@
 # CYMI Support-Zentrale
 
 Eine einzelne Webseite (`index.html`), mit der du Creator-Teams bei Red Bull Can You Make It?
-aus der Ferne unterstützt: Standort des Teams setzen, Ziel und Checkpoints eintragen, Route
-und Wetter berechnen, Orte in der Nähe oder entlang der Route finden und alles als
-Telegram-Nachricht an das Team schicken. Es gibt keinen Server und keine Installation,
-alles läuft im Browser.
+aus der Ferne unterstützt. Du gibst **einmal** dein Telegram-Bot-Token ein, danach läuft alles automatisch:
+Teams melden sich selbst an, ihr Live-Standort erscheint auf der Karte, Fotos und Nachrichten landen
+im Posteingang, und der Bot beantwortet Fragen wie „Wo gibt's Wasser?“ selbstständig.
+Es gibt keinen Server und keine Installation, alles läuft im Browser.
 
-## Was die Seite kann
-
-| Bereich | Funktion | Datenquelle |
-|---|---|---|
-| Team & Standort | mehrere Teams, Standort per Kartenklick, Suche, Koordinaten, Google-Maps-Link oder Telegram-Live-Standort | Nominatim (OSM) |
-| Route | Auto/Trampen, Fahrrad, zu Fuß; Zwischenziele mit optimierter Reihenfolge; Navi- und ÖPNV-Links für Google Maps | OSRM (routing.openstreetmap.de) |
-| Orte | Trinkwasser, Duschen, Toiletten, Schlafplätze, Essen, Restaurants, Gratis-WLAN, Bahnhof/Bus, Tankstellen und Raststätten (Trampen), Waschsalon, Apotheke/Arzt, Touristinfo. Suche im Umkreis von Standort oder Ziel oder entlang der Route | Overpass (OSM) |
-| Wetter | jetzt, nächste 12 h, Sonnenuntergang, 3-Tage-Trend, Wetter entlang der Route zur voraussichtlichen Durchfahrtszeit, Warnhinweise | Open-Meteo |
-| Telegram | Nachricht mit Vorschau und Bearbeitung, Orte optional als Karten-Pins, Chat-IDs finden, Live-Standort der Teams abholen (auf Wunsch alle 60 s) | Telegram Bot API |
-
-## Einrichten (einmalig, ca. 5 Minuten)
+## Einrichten (einmalig, ca. 3 Minuten)
 
 1. **Bot anlegen:** Schreib in Telegram dem [@BotFather](https://t.me/BotFather) `/newbot` und kopiere das Token.
-2. **Seite öffnen:** `index.html` im Browser öffnen, entweder per Doppelklick oder besser über
-   GitHub Pages bzw. lokal mit `python -m http.server` im Ordner und dann `http://localhost:8000`.
-3. **Token eintragen:** Abschnitt 5, Feld „Bot-Token“. Das Token bleibt nur in deinem Browser (localStorage).
-4. **Team anlegen:** Abschnitt 1, Teamname eingeben, „+ Team“.
-5. **Chat-ID holen:** Das Team schreibt deinem Bot einmal eine Nachricht, zum Beispiel `/start`.
-   Danach klickst du auf „Chats & Chat-IDs finden“ und dann auf den Chat des Teams.
+2. **Seite öffnen:** `index.html` im Browser öffnen (Chrome oder Firefox).
+3. **Token eintragen:** Abschnitt 0, „Verbinden“. Ab jetzt verbindet sich die Seite bei jedem Öffnen automatisch.
+4. **Link an die Teams schicken:** Die Seite zeigt dir `https://t.me/<dein_bot>`. Sobald ein Team dort auf
+   „Start“ tippt, ist es automatisch als Team angelegt und bekommt die Bedienknöpfe.
 
-## Live-Standort der Teams
+Mit „🔔 Benachrichtigungen“ meldet dein Browser neue Nachrichten, auch wenn der Tab im Hintergrund ist.
 
-Das Team teilt im Chat mit dem Bot seinen **Live-Standort** (Büroklammer → Standort → Live-Standort teilen).
-Mit „📡 Position aus Telegram“ holst du die neueste Position, mit „alle 60 s“ wird sie automatisch aktualisiert.
+## Was die Teams im Bot-Chat machen können
 
-- Am einfachsten ist ein **Privatchat** zwischen Team und Bot.
-- In einer **Gruppe** sieht der Bot Standorte nur, wenn du beim BotFather `/setprivacy` → *Disable* einstellst.
-- Die Seite holt die Updates mit `getUpdates`. Ist für den Bot ein Webhook gesetzt, klappt das nicht.
-  Nimm deshalb einen eigenen Bot nur für dieses Tool.
+Die Teams teilen einmal ihren **Live-Standort** (📎 → Standort → Live-Standort teilen, 8 Stunden) und
+tippen dann einfach auf die Knöpfe:
 
-## Typischer Ablauf
+| Knopf / Befehl | Antwort des Bots |
+|---|---|
+| 💧 Wasser · 🚿 Dusche · 🚻 WC · 🛏 Schlafen · 🍞 Essen · ⛽ Trampen · 📶 WLAN · 🚉 Bahnhof · 💊 Apotheke | die 5 nächsten Orte mit Entfernung, Öffnungszeiten und Google-Maps-Link, dazu der nächste als Karten-Pin. Der Suchradius wird automatisch größer, wenn in der Nähe nichts ist |
+| 🌦 Wetter | Wetter jetzt, nächste 12 h, Sonnenuntergang, 3 Tage, Warnungen, Wetter am Ziel |
+| 🧭 Route | Entfernung und Fahrzeit zum Ziel, Navi- und Bus-&-Bahn-Link, Wetter bei Ankunft |
+| `/ziel Berlin` | setzt das Ziel des Teams und schickt gleich die Route |
+| alles andere (Text, Fotos, Videos, Sprachnachrichten, Dateien) | landet bei dir im Posteingang |
 
-1. Team wählen, Position aus Telegram holen (oder auf die Karte klicken).
-2. Klick-Modus auf „Ziel“ stellen und den nächsten Checkpoint anklicken (oder suchen).
-3. „Route berechnen“, danach „Wetter laden“.
-4. Kategorien wählen, zum Beispiel 💧 🚿 🛏 ⛽, Suchbereich „Entlang der Route“, „Orte suchen“.
-   Die drei nächsten Treffer pro Kategorie sind schon angehakt.
-5. Vorschau prüfen, Notiz dazuschreiben, „📨 An Team senden“.
+**Wichtig:** Der Bot antwortet nur, solange die Seite bei dir offen ist (am besten auf einem
+Laptop, der an bleibt). Ist sie zu, bleiben die Nachrichten bis zu 24 Stunden bei Telegram liegen und
+kommen beim nächsten Öffnen an.
 
-## Hinweise
+## Was du auf der Seite machst
 
-- **Regeln prüfen:** Kläre vorher mit Red Bull bzw. in den offiziellen Regeln für Creator-Teams,
-  ob Unterstützung von außen und die Nutzung von Telegram auf den Event-Handys erlaubt ist.
-- Die Daten stammen aus OpenStreetMap. Öffnungszeiten und Gebühren können fehlen oder veraltet sein.
-- Die Dienste sind kostenlos und für faire Nutzung gedacht. Suchen nur auf Knopfdruck, nicht in Schleifen.
-- Fahrzeiten aus OSRM sind Autofahrzeiten. Beim Trampen kommt die Wartezeit dazu.
+| Bereich | Funktion |
+|---|---|
+| 1 · Team & Standort | Teams wechseln, Standort per Karte, Suche, Koordinaten oder Maps-Link korrigieren |
+| 2 · Nachrichten | Chatverlauf mit dem Team inkl. Fotos, Videos, Sprachnachrichten, Dateien und Bot-Antworten; schnelle Antwort |
+| 3 · Ziel & Route | Ziel und Zwischenziele je Team, optimale Reihenfolge, „Ziel für alle Teams übernehmen“ |
+| 4 · Orte finden | 12 Kategorien im Umkreis von Standort oder Ziel oder entlang der Route |
+| 5 · Wetter | Standort, Ziel und Punkte entlang der Route zur voraussichtlichen Durchfahrtszeit |
+| 6 · Update senden | fertige Nachricht mit Route, Wetter und Orten, plus **Bilder, Videos, Audio und Dateien** als Anhang, optional an alle Teams |
+
+## Gut zu wissen
+
+- **Backup:** „⬇ Backup“ speichert Teams, Verlauf und Token als Datei. Damit kannst du alles auf einem
+  anderen Rechner wiederherstellen. Die Datei enthält dein Token, also nicht weitergeben.
+- **Nur ein Tab:** Telegram erlaubt pro Bot nur einen Empfänger. Ist die Seite zweimal offen, gibt es eine Warnung.
+- **Eigener Bot:** Nimm einen Bot nur für dieses Tool. Ist für ihn ein Webhook gesetzt, fragt die Seite, ob sie ihn entfernen soll.
+- **Gruppen:** In Gruppen sieht der Bot normale Nachrichten und Standorte nur, wenn du beim BotFather
+  `/setprivacy` → *Disable* einstellst. Der Knopf „📍 Standort senden“ funktioniert nur im Privatchat.
+- **Dateigrößen:** Bots können Dateien bis 20 MB empfangen und bis 50 MB senden (Fotos bis 10 MB).
+- **Daten:** OpenStreetMap (Overpass, Nominatim, OSRM), Karten von CARTO/Esri, Wetter von Open-Meteo.
+  Öffnungszeiten und Gebühren können fehlen oder veraltet sein. Fahrzeiten sind Autofahrzeiten,
+  beim Trampen kommt die Wartezeit dazu.
+- **Regeln prüfen:** Kläre vorher mit Red Bull, ob Unterstützung von außen für Creator-Teams erlaubt ist
+  und ob Telegram auf den Event-Handys genutzt werden darf.
