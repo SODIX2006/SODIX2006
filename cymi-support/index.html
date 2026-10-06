@@ -147,6 +147,20 @@ button:disabled { opacity: .5; cursor: wait; }
 .leaflet-control-attribution { background: rgba(7,16,41,.8) !important; color: var(--muted); }
 .leaflet-control-attribution a { color: var(--silver); }
 footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.cards { display: grid; gap: 6px; }
+.tcard { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; padding: 8px 10px; background: var(--soft); border: 1px solid var(--line); border-left: 4px solid var(--line); border-radius: 3px; cursor: pointer; }
+.tcard:hover { border-color: var(--silver); }
+.tcard.active { border-color: var(--yellow); background: rgba(255,201,6,.08); }
+.tcard.fresh { border-left-color: var(--ok); }
+.tcard.stale { border-left-color: var(--yellow); }
+.tcard.lost { border-left-color: var(--err); }
+.tcard .tn { font-family: var(--display); font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 17px; }
+.tcard .ts { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
+.tcard .badge { margin-left: 4px; }
+#sosBar { position: sticky; top: 0; z-index: 1500; background: var(--err); color: #fff; padding: 10px 16px; font-weight: 700; animation: sosblink .8s infinite alternate; }
+#sosBar .row { margin: 3px 0; }
+#sosBar button { background: #fff; color: #8b0020; border-color: #fff; font-size: 13px; padding: 4px 10px; }
+@keyframes sosblink { to { background: #8b0020; } }
 .hidden { display: none !important; }
 </style>
 </head>
@@ -161,6 +175,7 @@ footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
   </div>
   <span id="connPill" class="badge">offline</span>
 </header>
+<div id="sosBar" class="hidden"></div>
 <main>
   <div id="map"></div>
   <div id="panel">
@@ -182,6 +197,7 @@ footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
           <label class="chip"><input type="checkbox" id="optLive"> Live empfangen</label>
           <label class="chip"><input type="checkbox" id="optAutoTeams"> neue Chats = neues Team</label>
           <label class="chip"><input type="checkbox" id="optAutoReply"> Bot antwortet selbst</label>
+          <label class="chip"><input type="checkbox" id="optHints"> Bot warnt von selbst (Sonnenuntergang, Regen, Kälte, Deadlines)</label>
         </div>
         <div class="row" style="margin-top:8px">
           <button id="notifyBtn">🔔 Benachrichtigungen</button>
@@ -195,11 +211,12 @@ footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
     <details open>
       <summary><span><span class="num">1</span>Team &amp; Standort</span></summary>
       <div class="body">
-        <div class="row">
-          <select id="teamSel"></select>
-          <button id="teamDel" title="Team löschen">🗑</button>
-        </div>
+        <div id="teamCards" class="cards"></div>
         <div id="posBox" class="box"></div>
+        <div class="row" style="margin-top:6px">
+          <button id="gpx" title="Gefahrene Strecke als GPX-Datei, z. B. für Vlog-Karten oder Komoot/Strava">⬇ Strecke (GPX)</button>
+          <button id="teamDel">🗑 Team löschen</button>
+        </div>
         <div id="freeChats" class="list"></div>
         <details style="margin:8px 0 0">
           <summary style="font-weight:400">Team manuell anlegen</summary>
@@ -260,6 +277,11 @@ footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
         </div>
         <div class="row" style="margin-top:6px">
           <button id="destAll">Ziel für alle Teams übernehmen</button>
+        </div>
+        <label>Checkpoints (gelten für alle Teams, abrufbar mit 🏁 im Bot)</label>
+        <div id="cpBox"></div>
+        <div class="row" style="margin-top:6px">
+          <button id="cpAdd">Aktuelles Ziel als Checkpoint speichern</button>
         </div>
         <div id="routeBox"></div>
       </div>
@@ -433,6 +455,9 @@ const ACTIONS = {
   weather: { words: ['wetter', 'weather'], cmd: 'wetter', desc: 'Wetter am Standort' },
   route: { words: ['route', 'weg', 'navi'], cmd: 'route', desc: 'Route zum Ziel' },
   setdest: { words: ['ziel'], cmd: 'ziel', desc: 'Ziel setzen, z. B. /ziel Berlin' },
+  checkpoints: { words: ['checkpoints', 'checkpoint', 'cp'], cmd: 'checkpoints', desc: 'Checkpoints & Deadlines' },
+  phrases: { words: ['sprache', 'sätze', 'phrasen', 'übersetzen'], cmd: 'sprache', desc: 'Wichtige Sätze in der Landessprache' },
+  sos: { words: ['sos', 'notfall', 'notruf'], cmd: 'sos', desc: 'Notfall – alarmiert euren Supporter' },
 };
 const KEYBOARD = {
   keyboard: [
@@ -441,10 +466,41 @@ const KEYBOARD = {
     [{ text: '🛏 Schlafen' }, { text: '🍞 Essen' }, { text: '⛽ Trampen' }],
     [{ text: '🌦 Wetter' }, { text: '🧭 Route' }, { text: '📶 WLAN' }],
     [{ text: '🚉 Bahnhof' }, { text: '💊 Apotheke' }, { text: '❓ Hilfe' }],
+    [{ text: '🏁 Checkpoints' }, { text: '🗣 Sprache' }, { text: '🆘 SOS' }],
   ],
   resize_keyboard: true, is_persistent: true,
 };
-const BOT_RADII = [800, 2000, 5000, 12000];
+const BOT_RADII = [1000, 3000, 8000];
+
+// Sätze zum Vorzeigen beim Tauschen und Trampen
+const PHRASES = {
+  en: ['English', ["Hi! We're students on a challenge, travelling across Europe without money – only with Red Bull cans.", 'Could we trade some Red Bull for this?', 'Could you give us a ride to …?', 'Where can we find drinking water?', 'Could we stay here for the night?', 'Thank you so much!']],
+  de: ['Deutsch', ['Hallo! Wir sind Studierende bei einer Challenge und reisen ohne Geld durch Europa – nur mit Red-Bull-Dosen.', 'Können wir das gegen Red Bull tauschen?', 'Könnten Sie uns nach … mitnehmen?', 'Wo gibt es Trinkwasser?', 'Dürften wir hier übernachten?', 'Vielen Dank!']],
+  fr: ['Französisch', ["Bonjour ! Nous sommes des étudiants qui traversent l'Europe sans argent, seulement avec des canettes de Red Bull.", 'Pourrait-on échanger ça contre du Red Bull ?', 'Pourriez-vous nous emmener à … ?', "Où peut-on trouver de l'eau potable ?", 'Pourrait-on dormir ici cette nuit ?', 'Merci beaucoup !']],
+  es: ['Spanisch', ['¡Hola! Somos estudiantes que cruzan Europa sin dinero, solo con latas de Red Bull.', '¿Podemos cambiar esto por Red Bull?', '¿Nos podría llevar a …?', '¿Dónde hay agua potable?', '¿Podríamos pasar la noche aquí?', '¡Muchas gracias!']],
+  it: ['Italienisch', ["Ciao! Siamo studenti che attraversano l'Europa senza soldi, solo con lattine di Red Bull.", 'Possiamo scambiarlo con del Red Bull?', 'Ci potrebbe dare un passaggio fino a …?', 'Dove possiamo trovare acqua potabile?', 'Potremmo passare la notte qui?', 'Grazie mille!']],
+  pt: ['Portugiesisch', ['Olá! Somos estudantes a atravessar a Europa sem dinheiro, só com latas de Red Bull.', 'Podemos trocar isto por Red Bull?', 'Pode dar-nos boleia até …?', 'Onde há água potável?', 'Podemos passar a noite aqui?', 'Muito obrigado!']],
+  nl: ['Niederländisch', ['Hallo! Wij zijn studenten die zonder geld door Europa reizen, alleen met blikjes Red Bull.', 'Kunnen we dit ruilen voor Red Bull?', 'Kunt u ons meenemen naar …?', 'Waar is drinkwater?', 'Mogen we hier overnachten?', 'Hartelijk bedankt!']],
+  pl: ['Polnisch', ['Cześć! Jesteśmy studentami i podróżujemy po Europie bez pieniędzy, tylko z puszkami Red Bulla.', 'Czy możemy to wymienić na Red Bulla?', 'Czy może nas Pan/Pani podwieźć do …?', 'Gdzie jest woda pitna?', 'Czy możemy tu przenocować?', 'Bardzo dziękujemy!']],
+  cs: ['Tschechisch', ['Ahoj! Jsme studenti a cestujeme po Evropě bez peněz, jen s plechovkami Red Bullu.', 'Můžeme to vyměnit za Red Bull?', 'Mohl byste nás svézt do …?', 'Kde je pitná voda?', 'Můžeme tu přespat?', 'Moc děkujeme!']],
+  sk: ['Slowakisch', ['Ahoj! Sme študenti a cestujeme po Európe bez peňazí, len s plechovkami Red Bullu.', 'Môžeme to vymeniť za Red Bull?', 'Mohli by ste nás zviezť do …?', 'Kde je pitná voda?', 'Môžeme tu prespať?', 'Ďakujeme veľmi pekne!']],
+  hu: ['Ungarisch', ['Szia! Egyetemisták vagyunk, pénz nélkül utazunk Európán át, csak Red Bull dobozokkal.', 'Elcserélhetjük ezt Red Bullra?', 'Elvinne minket ide: …?', 'Hol van ivóvíz?', 'Itt tölthetnénk az éjszakát?', 'Nagyon köszönjük!']],
+  hr: ['Kroatisch/Serbisch/Bosnisch', ['Bok! Studenti smo i putujemo Europom bez novca, samo s limenkama Red Bulla.', 'Možemo li ovo zamijeniti za Red Bull?', 'Možete li nas povesti do …?', 'Gdje ima pitke vode?', 'Možemo li ovdje prenoćiti?', 'Hvala vam puno!']],
+  sl: ['Slowenisch', ['Živijo! Študenti smo in potujemo po Evropi brez denarja, samo s pločevinkami Red Bulla.', 'Ali lahko to zamenjamo za Red Bull?', 'Bi nas lahko peljali do …?', 'Kje je pitna voda?', 'Ali lahko tukaj prenočimo?', 'Najlepša hvala!']],
+  da: ['Dänisch', ['Hej! Vi er studerende, der rejser gennem Europa uden penge, kun med Red Bull-dåser.', 'Kan vi bytte det for Red Bull?', 'Kan du give os et lift til …?', 'Hvor kan vi finde drikkevand?', 'Må vi overnatte her?', 'Mange tak!']],
+  sv: ['Schwedisch', ['Hej! Vi är studenter som reser genom Europa utan pengar, bara med Red Bull-burkar.', 'Kan vi byta det mot Red Bull?', 'Kan du ge oss skjuts till …?', 'Var finns det dricksvatten?', 'Får vi sova här i natt?', 'Tack så mycket!']],
+  no: ['Norwegisch', ['Hei! Vi er studenter som reiser gjennom Europa uten penger, bare med Red Bull-bokser.', 'Kan vi bytte dette mot Red Bull?', 'Kan du gi oss skyss til …?', 'Hvor finner vi drikkevann?', 'Kan vi overnatte her?', 'Tusen takk!']],
+  fi: ['Finnisch', ['Hei! Olemme opiskelijoita ja matkustamme Euroopan halki ilman rahaa, vain Red Bull -tölkkien kanssa.', 'Voimmeko vaihtaa tämän Red Bulliin?', 'Voisitteko antaa meille kyydin kohteeseen …?', 'Mistä löytyy juomavettä?', 'Voimmeko yöpyä täällä?', 'Kiitos paljon!']],
+  ro: ['Rumänisch', ['Bună! Suntem studenți și călătorim prin Europa fără bani, doar cu doze de Red Bull.', 'Putem schimba asta pe Red Bull?', 'Ne puteți duce până la …?', 'Unde găsim apă potabilă?', 'Putem dormi aici la noapte?', 'Mulțumim mult!']],
+  el: ['Griechisch', ['Γεια σας! Είμαστε φοιτητές και ταξιδεύουμε στην Ευρώπη χωρίς χρήματα, μόνο με κουτάκια Red Bull.', 'Μπορούμε να το ανταλλάξουμε με Red Bull;', 'Μπορείτε να μας πάτε μέχρι …;', 'Πού υπάρχει πόσιμο νερό;', 'Μπορούμε να μείνουμε εδώ το βράδυ;', 'Ευχαριστούμε πολύ!']],
+  bg: ['Bulgarisch', ['Здравейте! Студенти сме и пътуваме из Европа без пари, само с кенчета Red Bull.', 'Може ли да го разменим за Red Bull?', 'Може ли да ни закарате до …?', 'Къде има питейна вода?', 'Може ли да пренощуваме тук?', 'Много благодарим!']],
+};
+const COUNTRY_LANGS = {
+  de: ['de'], at: ['de'], ch: ['de', 'fr', 'it'], li: ['de'], lu: ['fr', 'de'], fr: ['fr'], mc: ['fr'], be: ['nl', 'fr'],
+  nl: ['nl'], gb: ['en'], ie: ['en'], mt: ['en'], es: ['es'], ad: ['es'], pt: ['pt'], it: ['it'], sm: ['it'], va: ['it'],
+  pl: ['pl'], cz: ['cs'], sk: ['sk'], hu: ['hu'], hr: ['hr'], ba: ['hr'], rs: ['hr'], me: ['hr'], si: ['sl'],
+  dk: ['da'], se: ['sv'], no: ['no'], fi: ['fi'], ro: ['ro'], md: ['ro'], gr: ['el'], cy: ['el'], bg: ['bg'],
+};
 const STALE_MS = 45 * 60 * 1000;
 const INBOX_MAX = 400;
 
@@ -453,7 +509,7 @@ const INBOX_MAX = 400;
 function defaults() {
   return { token: '', bot: null, teams: [], activeId: null, profile: 'car',
     radius: 1500, area: 'pos', cats: ['water', 'shower', 'toilet', 'sleep', 'food'],
-    tgOffset: 0, knownChats: {}, inbox: [], live: true, autoTeams: true, autoReply: true };
+    tgOffset: 0, knownChats: {}, inbox: [], live: true, autoTeams: true, autoReply: true, hints: true, checkpoints: [] };
 }
 function load() {
   try {
@@ -465,6 +521,9 @@ function load() {
         if (t.dest === undefined) t.dest = s.dest || null;
         if (!t.waypoints) t.waypoints = (s.waypoints || []).map(w => ({ ...w }));
         t.unread = t.unread || 0;
+        t.track = t.track || [];
+        t.km = t.km || 0;
+        t.hints = t.hints || {};
       }
       delete st.dest; delete st.waypoints; delete st.lastLoc;
       return st;
@@ -549,28 +608,50 @@ function shortAddr(a, fallback) {
   return [street, place, a.country_code ? a.country_code.toUpperCase() : null].filter(Boolean).join(', ') || fallback;
 }
 
-async function reverseLabel(p) {
+// Nominatim erlaubt höchstens eine Anfrage pro Sekunde – alle Anfragen laufen durch diese Warteschlange
+const nomQueue = [];
+let nomBusy = false;
+function nominatim(url) {
+  return new Promise((resolve, reject) => { nomQueue.push({ url, resolve, reject }); pumpNominatim(); });
+}
+async function pumpNominatim() {
+  if (nomBusy) return;
+  nomBusy = true;
+  while (nomQueue.length) {
+    const job = nomQueue.shift();
+    try { job.resolve(await getJson(job.url)); } catch (e) { job.reject(e); }
+    await sleep(1100);
+  }
+  nomBusy = false;
+}
+
+async function reverseGeo(p) {
   try {
-    const j = await getJson(`${NOMINATIM}/reverse?format=jsonv2&zoom=17&accept-language=de&lat=${p.lat}&lon=${p.lon}`);
-    return shortAddr(j.address, j.display_name);
+    const j = await nominatim(`${NOMINATIM}/reverse?format=jsonv2&zoom=17&accept-language=de&lat=${p.lat}&lon=${p.lon}`);
+    return { label: shortAddr(j.address, j.display_name), cc: j.address && j.address.country_code };
   } catch (e) {
     return null;
   }
 }
 
 async function geocode(q, limit = 5) {
-  const res = await getJson(`${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=${limit}&accept-language=de&q=${encodeURIComponent(q)}`);
+  const res = await nominatim(`${NOMINATIM}/search?format=jsonv2&addressdetails=1&limit=${limit}&accept-language=de&q=${encodeURIComponent(q)}`);
   return res.map(r => ({ lat: +r.lat, lon: +r.lon, label: shortAddr(r.address, r.display_name), full: r.display_name }));
 }
 
 // ---------- Datenquellen ----------
 
+const overpassCache = new Map();
 async function overpass(query) {
+  const hit = overpassCache.get(query);
+  if (hit && Date.now() - hit.time < 15 * 60 * 1000) return hit.data;
   let lastErr;
   for (const url of OVERPASS) {
     try {
-      return await getJson(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
+      const data = await getJson(url, { method: 'POST', body: 'data=' + encodeURIComponent(query),
         headers: { 'Content-Type': 'application/x-www-form-urlencoded' } });
+      overpassCache.set(query, { time: Date.now(), data });
+      return data;
     } catch (e) { lastErr = e; }
   }
   throw lastErr;
@@ -591,7 +672,7 @@ async function findPois({ center, samples, radius, cats }) {
     const pts = samples.filter((_, i) => i % step === 0 || i === samples.length - 1);
     around = `(around:${radius},${pts.map(p => `${p.lat.toFixed(5)},${p.lon.toFixed(5)}`).join(',')})`;
   } else {
-    around = `(around:${radius},${center.lat.toFixed(6)},${center.lon.toFixed(6)})`;
+    around = `(around:${radius + 100},${center.lat.toFixed(3)},${center.lon.toFixed(3)})`;
   }
   const parts = cats.flatMap(c => CATS[c].q.map(q => q + around + ';')).join('');
   const j = await overpass(`[out:json][timeout:40];(${parts});out tags center 3000;`);
@@ -746,6 +827,7 @@ function drawMarks() {
   }
   const t = activeTeam();
   if (!t) return;
+  if (t.track.length > 1) L.polyline(t.track.map(([la, lo]) => [la, lo]), { color: '#db0a40', weight: 3, opacity: 0.85, dashArray: '6 6' }).addTo(layers.marks);
   if (t.dest) L.marker([t.dest.lat, t.dest.lon], { icon: pinIcon('🏁', '#db0a40') }).bindPopup('Ziel: ' + esc(t.dest.label || ll(t.dest))).addTo(layers.marks);
   t.waypoints.forEach((w, i) => L.marker([w.lat, w.lon], { icon: pinIcon(String(i + 1), '#455a64') }).bindPopup('Zwischenziel ' + (i + 1) + ': ' + esc(w.label || ll(w))).addTo(layers.marks));
 }
@@ -759,22 +841,29 @@ map.on('click', e => {
 
 function createTeam(name, chatId) {
   const t = { id: 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5), name, chatId: chatId ? String(chatId) : '',
-    pos: null, dest: null, waypoints: [], unread: 0 };
+    pos: null, dest: null, waypoints: [], unread: 0, track: [], km: 0, hints: {} };
   state.teams.push(t);
   if (!state.activeId) state.activeId = t.id;
   return t;
 }
 
 function renderTeams() {
-  const sel = $('#teamSel');
-  sel.innerHTML = state.teams.length
-    ? state.teams.map(t => `<option value="${esc(t.id)}" ${t.id === state.activeId ? 'selected' : ''}>${esc(t.name)}${t.unread ? ` (${t.unread} neu)` : ''}${t.chatId ? '' : ' – keine Chat-ID'}</option>`).join('')
-    : '<option value="">– noch kein Team –</option>';
+  $('#teamCards').innerHTML = state.teams.map(x => {
+    const age = x.pos ? Date.now() - x.pos.time : Infinity;
+    const cls = age < 15 * 60e3 ? 'fresh' : age < STALE_MS ? 'stale' : 'lost';
+    const toDest = x.pos && x.dest ? ` · 🏁 noch ${fmtDist(haversine(x.pos, x.dest))}` : '';
+    return `<div class="tcard ${cls}${x.id === state.activeId ? ' active' : ''}" data-id="${esc(x.id)}">
+      <span class="tn">${esc(x.name)}</span>
+      <span>${x.sos ? '<span class="badge err">SOS</span>' : ''}${x.unread ? `<span class="badge new">${x.unread} neu</span>` : ''}</span>
+      <span class="ts">${x.pos ? `📍 ${esc(x.pos.label || ll(x.pos))} · ${ago(x.pos.time)}` : 'noch kein Standort'} · 🛣 ${Math.round(x.km)} km${toDest}${x.chatId ? '' : ' · keine Chat-ID'}</span>
+    </div>`;
+  }).join('');
+  $('#teamCards').querySelectorAll('.tcard').forEach(c => c.onclick = () => { if (c.dataset.id !== state.activeId) selectTeam(c.dataset.id); });
   const t = activeTeam();
   $('#posBox').innerHTML = !t
     ? (state.bot ? `<span class="muted">Schick deinen Teams den Link <b>t.me/${esc(state.bot.username)}</b>. Sobald sie auf „Start“ tippen, erscheinen sie hier automatisch.</span>`
       : '<span class="muted">Verbinde zuerst oben deinen Telegram-Bot.</span>')
-    : t.pos ? `📍 <b>${esc(t.pos.label || 'Standort')}</b><br><span class="muted">${ll(t.pos)} · Stand ${fmtClock(new Date(t.pos.time))}${Date.now() - t.pos.time > STALE_MS ? ' ⚠️ älter als 45 min' : ''} · Chat-ID ${esc(t.chatId || '–')}</span>`
+    : t.pos ? `📍 <b>${esc(t.pos.label || 'Standort')}</b><br><span class="muted">${ll(t.pos)} · Stand ${fmtClock(new Date(t.pos.time))}${Date.now() - t.pos.time > STALE_MS ? ' ⚠️ älter als 45 min' : ''} · Chat-ID ${esc(t.chatId || '–')}</span><br>🛣 Bisher ca. <b>${Math.round(t.km)} km</b> unterwegs <span class="muted">(${t.track.length} Wegpunkte)</span>`
       : `<span class="muted">Noch kein Standort für ${esc(t.name)}. Am besten teilt das Team im Bot-Chat seinen Live-Standort.</span>`;
   const free = Object.entries(state.knownChats).filter(([id]) => !teamByChat(id));
   $('#freeChats').innerHTML = free.length ? '<p class="muted">Chats ohne Team:</p>' + free.map(([id, name]) =>
@@ -791,8 +880,9 @@ function renderTeams() {
   $('#wpBox').innerHTML = t ? t.waypoints.map((w, i) => `<div class="wp"><span>${i + 1}. ${esc(w.label || ll(w))}</span><button data-i="${i}">✕</button></div>`).join('') : '';
   $('#wpBox').querySelectorAll('button').forEach(b => b.onclick = () => { t.waypoints.splice(+b.dataset.i, 1); clearRoute(); changed(); });
 
+  renderCheckpoints();
   const unread = state.teams.reduce((n, x) => n + (x.unread || 0), 0);
-  document.title = (unread ? `(${unread}) ` : '') + 'CYMI Support-Zentrale';
+  if (!alarmTimer) document.title = (unread ? `(${unread}) ` : '') + 'CYMI Support-Zentrale';
   drawMarks();
 }
 
@@ -826,14 +916,14 @@ async function setPoint(target, p, label) {
   const t = activeTeam();
   if (!t) return status('Erst ein Team auswählen.', true);
   p = { lat: p.lat, lon: p.lon, label: label || null, time: Date.now() };
-  if (target === 'pos') t.pos = p;
+  if (target === 'pos') { t.pos = p; addTrack(t, p); }
   else if (target === 'dest') t.dest = p;
   else t.waypoints.push(p);
   clearRoute();
   changed();
-  if (!label) {
-    const name = await reverseLabel(p);
-    if (name) { p.label = name; changed(); }
+  if (!label || target === 'pos') {
+    const g = await reverseGeo(p);
+    if (g) { p.label = label || g.label; p.cc = g.cc; changed(); }
   }
 }
 
@@ -851,7 +941,97 @@ $('#teamDel').onclick = () => {
   state.inbox = state.inbox.filter(m => String(m.chatId) !== String(t.chatId));
   selectTeam(state.teams[0] ? state.teams[0].id : null);
 };
-$('#teamSel').onchange = e => selectTeam(e.target.value);
+
+function ago(ms) {
+  const m = Math.round((Date.now() - ms) / 60000);
+  if (m < 1) return 'gerade eben';
+  if (m < 60) return `vor ${m} min`;
+  if (m < 1440) return `vor ${Math.floor(m / 60)} h ${m % 60} min`;
+  return `vor ${Math.floor(m / 1440)} Tg.`;
+}
+setInterval(renderTeams, 60000);
+
+function addTrack(team, p) {
+  const last = team.track[team.track.length - 1];
+  if (last) {
+    const d = haversine({ lat: last[0], lon: last[1] }, p);
+    if (d < 200) return;
+    team.km += d / 1000;
+  }
+  team.track.push([+p.lat.toFixed(5), +p.lon.toFixed(5), p.time]);
+  if (team.track.length > 3000) team.track.splice(0, team.track.length - 3000);
+}
+
+function download(name, text, type) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type }));
+  a.download = name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+
+$('#gpx').onclick = () => {
+  const t = activeTeam();
+  if (!t || t.track.length < 2) return status('Für dieses Team ist noch keine Strecke aufgezeichnet.', true);
+  const pts = t.track.map(([la, lo, ti]) => `   <trkpt lat="${la}" lon="${lo}"><time>${new Date(ti).toISOString()}</time></trkpt>`).join('\n');
+  download(`${t.name.replace(/[^\p{L}\d-]+/gu, '_')}-strecke.gpx`,
+    `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="CYMI Support HQ" xmlns="http://www.topografix.com/GPX/1/1">\n <trk><name>${esc(t.name)}</name><trkseg>\n${pts}\n </trkseg></trk>\n</gpx>\n`,
+    'application/gpx+xml');
+};
+
+// ---------- Checkpoints ----------
+
+function parseDeadline(s) {
+  s = (s || '').trim();
+  if (!s) return null;
+  const now = new Date();
+  let m = s.match(/^(\d{1,2})\.(\d{1,2})\.?(?:\d{2,4})?\s+(\d{1,2})[:.](\d{2})$/);
+  if (m) return new Date(now.getFullYear(), +m[2] - 1, +m[1], +m[3], +m[4]).getTime();
+  m = s.match(/^(\d{1,2})[:.](\d{2})$/);
+  if (m) {
+    const d = new Date(now);
+    d.setHours(+m[1], +m[2], 0, 0);
+    if (d < now) d.setDate(d.getDate() + 1);
+    return d.getTime();
+  }
+  return NaN;
+}
+const fmtDeadline = ms => new Date(ms).toLocaleString('de-DE', { weekday: 'short', hour: '2-digit', minute: '2-digit' });
+
+function renderCheckpoints() {
+  const box = $('#cpBox');
+  if (!state.checkpoints.length) { box.innerHTML = '<p class="muted">Noch keine Checkpoints.</p>'; return; }
+  box.innerHTML = state.checkpoints.map((c, i) => {
+    const left = c.deadline ? c.deadline - Date.now() : null;
+    const dl = c.deadline ? ` · ⏰ ${fmtDeadline(c.deadline)}${left > 0 ? ` (noch ${fmtDur(left / 1000)})` : ' (vorbei)'}` : '';
+    return `<div class="wp"><span>🏁 <b>${esc(c.name)}</b><span class="muted">${esc(dl)}</span></span>
+      <span class="fixed"><button data-goal="${i}" title="Als Ziel für das aktive Team">Ziel</button> <button data-del="${i}">✕</button></span></div>`;
+  }).join('');
+  box.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => {
+    const t = activeTeam(), c = state.checkpoints[+b.dataset.goal];
+    if (!t) return status('Erst ein Team auswählen.', true);
+    t.dest = { lat: c.lat, lon: c.lon, label: c.name, time: Date.now() };
+    clearRoute();
+    changed();
+  });
+  box.querySelectorAll('[data-del]').forEach(b => b.onclick = () => {
+    if (!confirm('Checkpoint löschen?')) return;
+    state.checkpoints.splice(+b.dataset.del, 1);
+    changed();
+  });
+}
+
+$('#cpAdd').onclick = () => {
+  const t = activeTeam();
+  if (!t || !t.dest) return status('Setz zuerst ein Ziel (Karte oder Suche) – das wird dann als Checkpoint gespeichert.', true);
+  const name = prompt('Name des Checkpoints:', t.dest.label || 'Checkpoint');
+  if (!name) return;
+  const deadline = parseDeadline(prompt('Deadline (optional), z. B. „18:00“ oder „23.05. 18:00“:', ''));
+  if (Number.isNaN(deadline)) return status('Deadline nicht erkannt – bitte z. B. 18:00 oder 23.05. 18:00 eingeben.', true);
+  state.checkpoints.push({ id: 'c' + Date.now().toString(36), name: name.trim(), lat: t.dest.lat, lon: t.dest.lon, deadline });
+  changed();
+  status(`Checkpoint „${name}“ gespeichert.`);
+};
 
 $('#qGo').onclick = () => busy($('#qGo'), async () => {
   const s = $('#q').value.trim(), target = $('#qTarget').value;
@@ -1183,6 +1363,7 @@ function renderConn() {
   $('#optLive').checked = state.live;
   $('#optAutoTeams').checked = state.autoTeams;
   $('#optAutoReply').checked = state.autoReply;
+  $('#optHints').checked = state.hints;
   $('#tokenRow').classList.toggle('hidden', !!state.bot);
   $('#botInfo').innerHTML = state.bot
     ? `<div class="box">✅ Verbunden mit <b>@${esc(state.bot.username)}</b><br>
@@ -1219,6 +1400,7 @@ $('#connect').onclick = () => busy($('#connect'), async () => {
 $('#optLive').onchange = e => { state.live = e.target.checked; save(); if (state.live && state.bot) pollLoop(); else setConn(state.bot ? 'idle' : 'off'); };
 $('#optAutoTeams').onchange = e => { state.autoTeams = e.target.checked; save(); };
 $('#optAutoReply').onchange = e => { state.autoReply = e.target.checked; save(); };
+$('#optHints').onchange = e => { state.hints = e.target.checked; save(); };
 
 async function pollLoop() {
   if (polling) return;
@@ -1303,15 +1485,16 @@ function updateTeamPos(team, loc, time) {
   const p = { lat: loc.latitude, lon: loc.longitude, time, label: null };
   const moved = !team.pos || haversine(team.pos, p) > 300;
   if (!team.pos && team.id === state.activeId) map.setView([p.lat, p.lon], 13);
-  if (!moved) p.label = team.pos.label;
+  if (!moved) { p.label = team.pos.label; p.cc = team.pos.cc; }
   team.pos = p;
-  if (moved) reverseLabel(p).then(n => { if (n) { p.label = n; changed(); } });
+  addTrack(team, p);
+  if (moved) reverseGeo(p).then(g => { if (g) { p.label = g.label; p.cc = g.cc; changed(); } });
   if (team.id === state.activeId && route) clearRoute();
 }
 
-function notify(title, body) {
+function notify(title, body, force = false) {
   try {
-    if (document.hidden && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body });
+    if ((force || document.hidden) && 'Notification' in window && Notification.permission === 'granted') new Notification(title, { body });
   } catch (e) { /* ignorieren */ }
 }
 $('#notifyBtn').onclick = async () => {
@@ -1411,9 +1594,14 @@ $('#send').onclick = () => busy($('#send'), async () => {
 
 // ---------- Automatische Bot-Antworten ----------
 
-let botQueue = Promise.resolve();
-function enqueue(fn) {
-  botQueue = botQueue.then(fn).catch(e => console.error('Bot:', e));
+// Eine Warteschlange pro Team: Anfragen eines Teams laufen nacheinander, Teams blockieren sich nicht gegenseitig
+const botQueues = new Map();
+function enqueue(chatId, fn) {
+  const next = (botQueues.get(chatId) || Promise.resolve()).then(fn).catch(e => {
+    console.error('Bot:', e);
+    return sendText(chatId, '😕 Da ist gerade etwas schiefgelaufen (Kartendienst überlastet?). Versucht es in einer Minute nochmal.', 'bot').catch(() => {});
+  });
+  botQueues.set(chatId, next);
 }
 
 function parseAction(text) {
@@ -1433,12 +1621,14 @@ function handleCommand(team, m) {
   if (m.location) {
     if (!team.greetedLoc) {
       team.greetedLoc = true;
-      enqueue(() => sendText(team.chatId, '📍 Standort ist angekommen, danke! Tippt unten auf einen Knopf, wenn ihr etwas sucht.', 'bot', { reply_markup: KEYBOARD }));
+      enqueue(team.chatId, () => sendText(team.chatId, '📍 Standort ist angekommen, danke! Tippt unten auf einen Knopf, wenn ihr etwas sucht.', 'bot', { reply_markup: KEYBOARD }));
     }
     return;
   }
   const a = m.text && parseAction(m.text);
-  if (a) enqueue(() => runAction(team, a));
+  if (!a) return;
+  if (a.act === 'sos') return raiseSos(team);   // Notruf sofort, ohne Warteschlange
+  enqueue(team.chatId, () => runAction(team, a));
 }
 
 async function needPos(team) {
@@ -1459,7 +1649,8 @@ async function runAction(team, { act, arg }) {
       + '1️⃣ Teilt euren Live-Standort: 📎 → Standort → „Live-Standort teilen“ (8 Stunden).\n'
       + '2️⃣ Tippt dann einfach auf die Knöpfe unten:\n'
       + '💧 Wasser · 🚿 Dusche · 🚻 WC · 🛏 Schlafen · 🍞 Essen · ⛽ Trampen · 📶 WLAN · 🚉 Bahnhof · 💊 Apotheke · 🌦 Wetter · 🧭 Route\n'
-      + '3️⃣ „/ziel Berlin“ setzt euer nächstes Ziel.\n\n'
+      + '3️⃣ „/ziel Berlin“ setzt euer nächstes Ziel, 🏁 zeigt alle Checkpoints, 🗣 wichtige Sätze in der Landessprache.\n'
+      + '🆘 SOS alarmiert sofort euren Supporter.\n\n'
       + 'Alles andere – Fragen, Fotos, Videos – landet direkt bei eurem Supporter. Ihr schafft das! 💪', 'bot', { reply_markup: KEYBOARD });
   }
   tg('sendChatAction', { chat_id: chatId, action: 'find_location' }).catch(() => {});
@@ -1499,11 +1690,42 @@ async function runAction(team, { act, arg }) {
     return sendText(chatId, lines.join('\n') + staleNote(team), 'bot');
   }
 
+  if (act === 'checkpoints') {
+    if (!state.checkpoints.length) return sendText(chatId, '🏁 Noch keine Checkpoints eingetragen – euer Supporter meldet sich.', 'bot');
+    const list = state.checkpoints.map(c => ({ c, d: team.pos ? haversine(team.pos, c) : null }))
+      .sort((a, b) => (a.c.deadline || Infinity) - (b.c.deadline || Infinity) || (a.d ?? 0) - (b.d ?? 0));
+    const lines = ['🏁 Checkpoints'];
+    for (const { c, d } of list) {
+      const left = c.deadline ? c.deadline - Date.now() : null;
+      lines.push('', `• ${c.name}${d != null ? ` – ${fmtDist(d)} Luftlinie` : ''}`);
+      if (c.deadline) lines.push(`  ⏰ ${fmtDeadline(c.deadline)}${left > 0 ? ` (noch ${fmtDur(left / 1000)})` : ' (vorbei)'}`);
+      lines.push(`  ${team.pos ? mapsDir(team.pos, c, [], 'driving') : mapsWalk(c)}`);
+    }
+    lines.push('', 'Als Ziel setzen: „/ziel <Name>“');
+    return sendText(chatId, lines.join('\n'), 'bot');
+  }
+
+  if (act === 'phrases') {
+    if (await needPos(team)) return;
+    if (!team.pos.cc) {
+      const g = await reverseGeo(team.pos);
+      if (g) { team.pos.cc = g.cc; team.pos.label = team.pos.label || g.label; }
+    }
+    const langs = [...new Set([...(COUNTRY_LANGS[team.pos.cc] || []), 'en'])];
+    const lines = [`🗣 Sätze zum Vorzeigen${team.pos.cc ? ` (${team.pos.cc.toUpperCase()})` : ''} – einfach Handy hinhalten:`];
+    for (const l of langs) {
+      const [name, phrases] = PHRASES[l];
+      lines.push('', `— ${name} —`, ...phrases.map(x => '• ' + x));
+    }
+    return sendText(chatId, lines.join('\n'), 'bot');
+  }
+
   if (act === 'setdest') {
     if (!arg) {
       return sendText(chatId, team.dest ? `🏁 Euer Ziel: ${team.dest.label || ll(team.dest)}\nÄndern mit „/ziel Ort“.` : 'Noch kein Ziel. Schreibt z. B. „/ziel Berlin Hauptbahnhof“.', 'bot');
     }
-    const res = await geocode(arg, 1);
+    const cp = arg.length >= 3 && state.checkpoints.find(c => c.name.toLowerCase().includes(arg.toLowerCase()));
+    const res = cp ? [{ lat: cp.lat, lon: cp.lon, label: cp.name, full: `Checkpoint ${cp.name}` }] : await geocode(arg, 1);
     if (!res.length) return sendText(chatId, `🤔 „${arg}“ habe ich nicht gefunden. Versucht es genauer, z. B. mit Stadt und Land.`, 'bot');
     team.dest = { lat: res[0].lat, lon: res[0].lon, label: res[0].label, time: Date.now() };
     team.waypoints = [];
@@ -1529,15 +1751,117 @@ async function runAction(team, { act, arg }) {
   }
 }
 
+// ---------- Notruf ----------
+
+let alarmTimer = null, audioCtx = null;
+function beep() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    const o = audioCtx.createOscillator(), g = audioCtx.createGain();
+    o.type = 'square'; o.frequency.value = 880; g.gain.value = 0.08;
+    o.connect(g); g.connect(audioCtx.destination);
+    o.start(); o.stop(audioCtx.currentTime + 0.25);
+  } catch (e) { /* kein Ton möglich */ }
+}
+function renderSos() {
+  const list = state.teams.filter(t => t.sos);
+  const bar = $('#sosBar');
+  bar.classList.toggle('hidden', !list.length);
+  bar.innerHTML = list.map(t => `<div class="row"><span>🆘 NOTRUF von ${esc(t.name)} um ${fmtClock(new Date(t.sos))}</span>
+    <button class="fixed" data-show="${esc(t.id)}">Zeigen</button><button class="fixed" data-ack="${esc(t.id)}">Gesehen – Team informieren</button></div>`).join('');
+  bar.querySelectorAll('[data-show]').forEach(b => b.onclick = () => {
+    selectTeam(b.dataset.show);
+    const t = activeTeam();
+    if (t && t.pos) map.setView([t.pos.lat, t.pos.lon], 15);
+  });
+  bar.querySelectorAll('[data-ack]').forEach(b => b.onclick = () => {
+    const t = state.teams.find(x => x.id === b.dataset.ack);
+    t.sos = null;
+    changed();
+    renderSos();
+    sendText(t.chatId, '✅ Euer Supporter hat den Notruf gesehen und meldet sich sofort! Bei Gefahr: 112.', 'out').catch(e => status(e.message, true));
+  });
+  if (list.length && !alarmTimer) {
+    beep();
+    alarmTimer = setInterval(() => { beep(); document.title = document.title.startsWith('🆘') ? 'CYMI Support HQ' : '🆘 NOTRUF!'; }, 1200);
+  } else if (!list.length && alarmTimer) {
+    clearInterval(alarmTimer);
+    alarmTimer = null;
+    renderTeams();
+  }
+}
+
+async function raiseSos(team) {
+  team.sos = Date.now();
+  changed();
+  renderSos();
+  notify(`🆘 NOTRUF: ${team.name}`, team.pos ? team.pos.label || ll(team.pos) : 'Standort unbekannt', true);
+  const lines = ['🆘 Euer Supporter ist alarmiert!', '', '📞 Notruf in ganz Europa: 112 (kostenlos, geht auch ohne Guthaben)'];
+  try {
+    await sendText(team.chatId, lines.join('\n') + '\n\nWenn möglich: schreibt kurz, was passiert ist, und teilt euren Standort.', 'bot', { reply_markup: KEYBOARD });
+    if (team.pos) {
+      const res = (await findPois({ center: team.pos, radius: 5000, cats: ['health'] })).sort((a, b) => a.dist - b.dist).slice(0, 3);
+      if (res.length) {
+        await sendText(team.chatId, ['🏥 Nächste Hilfe:', ...res.map(p => `• ${p.name} (${typeName(p.tags) || ''}) – ${fmtDist(p.dist)}\n  ${mapsWalk(p)}`)].join('\n'), 'bot');
+      }
+    }
+  } catch (e) { console.error(e); }
+}
+
+// ---------- Automatische Hinweise ----------
+
+async function hintsTick() {
+  if (!state.hints || !state.bot || !state.live) return;
+  const teams = state.teams.filter(t => t.chatId && t.pos && Date.now() - t.pos.time < 3 * 3600e3);
+  if (!teams.length) return;
+  const msgs = new Map(teams.map(t => [t, []]));
+  for (const t of teams) {
+    for (const c of state.checkpoints) {
+      const left = c.deadline ? c.deadline - Date.now() : -1;
+      const key = 'cp:' + c.id;
+      if (left > 0 && left < 3 * 3600e3 && haversine(t.pos, c) > 1000 && !t.hints[key]) {
+        t.hints[key] = 1;
+        msgs.get(t).push(`⏰ Checkpoint ${c.name}: noch ${fmtDur(left / 1000)} (bis ${fmtClock(new Date(c.deadline))}). Ihr seid noch ${fmtDist(haversine(t.pos, c))} entfernt (Luftlinie).`);
+      }
+    }
+  }
+  try {
+    const now = Date.now() / 1000;
+    const pts = await fetchWeather(teams.map(t => ({ kind: 'pos', lat: t.pos.lat, lon: t.pos.lon, eta: now })));
+    teams.forEach((t, i) => {
+      const d = pts[i].data, off = d.utc_offset_seconds, h = d.hourly;
+      const today = new Date((now + off) * 1000).toISOString().slice(0, 10);
+      const localHour = new Date((now + off) * 1000).getUTCHours();
+      const ss = d.daily.sunset.find(x => x > now);
+      if (ss && ss - now < 100 * 60 && ss - now > 40 * 60 && t.hints.sunset !== today) {
+        t.hints.sunset = today;
+        msgs.get(t).push(`🌇 In ca. ${Math.round((ss - now) / 60)} min geht die Sonne unter (${fmtLocal(ss, off)}). Habt ihr schon einen Schlafplatz? Tippt auf 🛏 Schlafen.`);
+      }
+      const idx = h.time.map((_, j) => j);
+      const rain = idx.find(j => h.time[j] >= now && h.time[j] <= now + 3 * 3600 && (h.precipitation_probability[j] ?? 0) >= 70);
+      if (rain != null && (!t.hints.rain || Date.now() - t.hints.rain > 6 * 3600e3)) {
+        t.hints.rain = Date.now();
+        msgs.get(t).push(`☔ Ab ca. ${fmtLocal(h.time[rain], off)} wird's nass (${h.precipitation_probability[rain]}% Regenrisiko). Unterschlupf einplanen!`);
+      }
+      const night = idx.filter(j => h.time[j] >= now && h.time[j] <= now + 12 * 3600).map(j => h.temperature_2m[j]);
+      const tMin = night.length ? Math.min(...night) : 99;
+      if (localHour >= 17 && localHour <= 22 && tMin < 3 && t.hints.cold !== today) {
+        t.hints.cold = today;
+        msgs.get(t).push(`🥶 Heute Nacht wird es bis zu ${Math.round(tMin)}°C kalt. Sucht euch einen warmen Schlafplatz!`);
+      }
+    });
+  } catch (e) { console.error('Hinweise:', e); }
+  for (const [t, list] of msgs) {
+    if (list.length) enqueue(t.chatId, () => sendText(t.chatId, list.join('\n\n'), 'bot'));
+  }
+  save();
+}
+setInterval(() => hintsTick().catch(e => console.error(e)), 20 * 60 * 1000);
+
 // ---------- Backup ----------
 
 $('#backupOut').onclick = () => {
-  const blob = new Blob([JSON.stringify(state, null, 1)], { type: 'application/json' });
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = `cymi-support-backup-${new Date().toISOString().slice(0, 10)}.json`;
-  a.click();
-  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  download(`cymi-support-backup-${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify(state, null, 1), 'application/json');
   status('Backup gespeichert – enthält dein Bot-Token, also nicht weitergeben!');
 };
 $('#backupIn').onclick = () => $('#backupFile').click();
@@ -1563,7 +1887,9 @@ renderConn();
 if (!activeTeam() && state.teams.length) state.activeId = state.teams[0].id;
 renderTeams();
 renderInbox();
+renderSos();
 autoMessage();
+setTimeout(() => hintsTick().catch(e => console.error(e)), 30000);
 const t0 = activeTeam();
 if (t0 && t0.pos) map.setView([t0.pos.lat, t0.pos.lon], 12);
 if (state.token && state.bot) {
