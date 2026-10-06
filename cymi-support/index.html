@@ -44,8 +44,8 @@ button { padding: 7px 11px; border: 1px solid var(--line); background: var(--sof
 button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
 button:disabled { opacity: .5; cursor: wait; }
 .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.row > * { flex: 1 1 auto; }
-.row > button, .row > .fixed { flex: 0 0 auto; }
+.row > * { flex: 1 1 0; min-width: 0; }
+.row > button, .row > .fixed { flex: 0 0 auto; width: auto; }
 .muted { color: var(--muted); font-size: 12px; }
 .box { background: var(--soft); border-radius: 7px; padding: 8px 10px; margin-top: 8px; }
 .chips { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -398,9 +398,18 @@ async function reverseLabel(p) {
 // ---------- Karte ----------
 
 const map = L.map('map').setView([50.5, 10.5], 5);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-}).addTo(map);
+// Die OSM-Kachelserver verlangen einen Referer und blockieren daher lokal geöffnete Dateien.
+const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const baseLayers = {
+  'Karte': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd', attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+  'Satellit': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Tiles &copy; Esri' }),
+  'OpenStreetMap (nur gehostet)': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: OSM_ATTR }),
+};
+baseLayers['Karte'].addTo(map);
+L.control.layers(baseLayers).addTo(map);
 const layers = {
   route: L.layerGroup().addTo(map),
   pois: L.layerGroup().addTo(map),
