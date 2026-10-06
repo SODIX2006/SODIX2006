@@ -6,91 +6,158 @@
 <title>CYMI Support-Zentrale</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:ital,wght@0,600;0,800;1,800;1,900&family=Barlow:wght@400;500;600&display=swap">
 <style>
 :root {
-  --bg: #f4f5f7; --panel: #ffffff; --text: #1b1f24; --muted: #5d6670; --line: #dde1e6;
-  --accent: #db0a40; --accent-text: #ffffff; --soft: #eef0f3; --ok: #1b7f3b; --err: #b3261e;
-  --bubble-in: #eef0f3; --bubble-out: #fde3ea; --bubble-bot: #e4f1ff;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --bg: #111418; --panel: #1a1e24; --text: #e8eaed; --muted: #9aa3ad; --line: #2c323a;
-    --accent: #ff3d6e; --accent-text: #ffffff; --soft: #232830; --ok: #5cc27f; --err: #ff8a80;
-    --bubble-in: #262b33; --bubble-out: #4a1f2b; --bubble-bot: #1f3047;
-  }
+  color-scheme: dark;
+  --bg: #071029; --bg2: #0c1a3d; --panel: #101f47; --panel2: #15275a; --text: #ffffff; --muted: #9fb0d6; --line: #233a78;
+  --red: #db0a40; --red-dark: #a50630; --yellow: #ffc906; --silver: #c9d1e3;
+  --accent: var(--red); --accent-text: #ffffff; --soft: #0b1838; --ok: #2fd27a; --err: #ff4d6d;
+  --bubble-in: #1a2c63; --bubble-out: #5a0c28; --bubble-bot: #12305e;
+  --display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--text); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-header { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px 16px; background: var(--panel); border-bottom: 1px solid var(--line); }
-header h1 { font-size: 16px; margin: 0; }
-header .sub { color: var(--muted); font-size: 12px; }
-main { display: grid; grid-template-columns: 1fr minmax(340px, 460px); height: calc(100% - 53px); }
-#map { height: 100%; min-height: 300px; }
-#panel { overflow-y: auto; background: var(--bg); padding: 10px 12px 40px; }
+body {
+  background: radial-gradient(1200px 600px at 100% 0%, #13286b 0%, transparent 60%), var(--bg);
+  color: var(--text); font: 14px/1.45 Barlow, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+/* Kopfzeile */
+header {
+  position: relative; display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 10px 16px 12px; background: linear-gradient(100deg, #0a1638 0%, #12286a 70%, #0a1638 100%); overflow: hidden;
+  border-bottom: 3px solid var(--red);
+}
+header::after {
+  content: ""; position: absolute; right: 120px; top: -20px; width: 180px; height: 120px; pointer-events: none;
+  background: linear-gradient(90deg, transparent 0 30%, rgba(255,201,6,.18) 30% 45%, transparent 45% 55%, rgba(219,10,64,.25) 55% 75%, transparent 75%);
+  transform: skewX(-25deg);
+}
+.brand { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.sun { width: 38px; height: 38px; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #ffe066, var(--yellow) 55%, #e0a800); box-shadow: 0 0 18px rgba(255,201,6,.45); flex: 0 0 auto; display: grid; place-items: center; font-size: 18px; }
+header h1 { margin: 0; font-family: var(--display); font-weight: 900; font-style: italic; font-size: 24px; line-height: 1; letter-spacing: .5px; text-transform: uppercase; }
+header h1 span { color: var(--yellow); }
+header .sub { color: var(--silver); font-size: 12px; letter-spacing: .3px; margin-top: 3px; }
+
+main { display: grid; grid-template-columns: 1fr minmax(340px, 460px); height: calc(100% - 65px); }
+#map { height: 100%; min-height: 300px; background: #0a1430; }
+#panel { overflow-y: auto; padding: 12px 12px 40px; background: linear-gradient(180deg, var(--bg2), var(--bg)); border-left: 1px solid var(--line); }
 @media (max-width: 800px) {
   main { grid-template-columns: 1fr; height: auto; }
   #map { height: 50vh; }
-  #panel { overflow: visible; }
+  #panel { overflow: visible; border-left: 0; }
+  header::after { display: none; }
+  header h1 { font-size: 20px; }
+  header .sub { display: none; }
+  #connPill { font-size: 11px; }
 }
-details { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; margin-bottom: 10px; }
-summary { cursor: pointer; padding: 10px 12px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; gap: 8px; }
-summary::after { content: "▾"; color: var(--muted); }
+
+/* Karten-Abschnitte */
+details { background: var(--panel); border: 1px solid var(--line); border-radius: 4px; margin-bottom: 12px; box-shadow: 0 6px 18px rgba(0,0,0,.25); }
+details details { box-shadow: none; background: var(--soft); }
+summary {
+  cursor: pointer; padding: 10px 12px; list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  font-family: var(--display); font-weight: 800; font-style: italic; font-size: 18px; text-transform: uppercase; letter-spacing: .6px;
+  border-left: 4px solid var(--red);
+}
+summary::-webkit-details-marker { display: none; }
+summary::after { content: "▾"; color: var(--yellow); font-style: normal; }
 details:not([open]) summary::after { content: "▸"; }
 summary .badge { margin-left: auto; }
-.body { padding: 0 12px 12px; }
-label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 3px; }
+.num { color: var(--yellow); margin-right: 6px; }
+details details summary { font-size: 14px; border-left-color: var(--yellow); }
+.body { padding: 2px 12px 12px; }
+
+label { display: block; font-size: 11px; color: var(--muted); margin: 10px 0 4px; text-transform: uppercase; letter-spacing: .8px; font-weight: 600; }
 input, select, textarea, button { font: inherit; color: var(--text); }
-input, select, textarea { width: 100%; padding: 7px 9px; background: var(--soft); border: 1px solid var(--line); border-radius: 7px; }
-input[type="checkbox"] { width: auto; }
+input, select, textarea { width: 100%; padding: 8px 10px; background: var(--soft); border: 1px solid var(--line); border-radius: 3px; }
+input:focus, select:focus, textarea:focus { outline: 2px solid var(--yellow); outline-offset: -1px; border-color: transparent; }
+input[type="checkbox"] { width: auto; accent-color: var(--red); }
+input[type="file"] { padding: 6px; }
+input[type="file"]::file-selector-button { font-family: var(--display); font-weight: 800; text-transform: uppercase; background: var(--panel2); color: var(--text); border: 1px solid var(--line); padding: 4px 10px; margin-right: 8px; cursor: pointer; }
+select option { background: var(--panel); }
 textarea { resize: vertical; min-height: 70px; }
-button { padding: 7px 11px; border: 1px solid var(--line); background: var(--soft); border-radius: 7px; cursor: pointer; }
-button.primary { background: var(--accent); color: var(--accent-text); border-color: var(--accent); font-weight: 600; }
+
+button {
+  padding: 8px 14px; border: 1px solid var(--line); background: var(--panel2); border-radius: 3px; cursor: pointer;
+  font-family: var(--display); font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: .5px; font-size: 15px;
+  transition: transform .08s, background .15s, border-color .15s;
+}
+button:hover { border-color: var(--yellow); }
+button:active { transform: translateY(1px); }
+button.primary { background: linear-gradient(180deg, var(--red), var(--red-dark)); border-color: var(--red); color: #fff; box-shadow: 0 3px 0 #6e0420; }
+button.primary:hover { border-color: var(--yellow); filter: brightness(1.08); }
 button:disabled { opacity: .5; cursor: wait; }
+
 .row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .row > * { flex: 1 1 0; min-width: 0; }
 .row > button, .row > .fixed { flex: 0 0 auto; width: auto; }
 .muted { color: var(--muted); font-size: 12px; }
-.box { background: var(--soft); border-radius: 7px; padding: 8px 10px; margin-top: 8px; }
-.chips { display: flex; flex-wrap: wrap; gap: 5px; }
-.chip { display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; border: 1px solid var(--line); border-radius: 999px; background: var(--soft); font-size: 13px; color: var(--text); cursor: pointer; margin: 0; }
+.box { background: var(--soft); border: 1px solid var(--line); border-left: 3px solid var(--yellow); border-radius: 3px; padding: 8px 10px; margin-top: 8px; }
+.box b { color: #fff; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 5px; padding: 4px 10px; border: 1px solid var(--line); border-radius: 2px; background: var(--soft);
+  font-size: 13px; color: var(--text); cursor: pointer; margin: 0; text-transform: none; letter-spacing: 0; font-weight: 500;
+}
+.chip:has(input:checked) { border-color: var(--yellow); background: rgba(255,201,6,.1); }
 .chip input { margin: 0; }
-.badge { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; font-weight: 600; background: var(--soft); color: var(--muted); }
-.badge.ok { background: var(--ok); color: #fff; }
-.badge.err { background: var(--err); color: #fff; }
-.badge.new { background: var(--accent); color: #fff; }
-.poi { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 6px 0; border-top: 1px solid var(--line); }
+
+.badge { display: inline-block; white-space: nowrap; padding: 2px 9px; border-radius: 2px; font-family: var(--display); font-weight: 800; font-style: italic; font-size: 13px; text-transform: uppercase; letter-spacing: .5px; background: var(--soft); color: var(--muted); border: 1px solid var(--line); }
+.badge.ok { background: var(--yellow); color: #0a1638; border-color: var(--yellow); }
+.badge.err { background: var(--err); color: #fff; border-color: var(--err); }
+.badge.new { background: var(--red); color: #fff; border-color: var(--red); }
+
+.poi { display: grid; grid-template-columns: auto 1fr; gap: 2px 8px; padding: 7px 0; border-top: 1px solid var(--line); }
 .poi input { margin-top: 3px; }
 .poi .name { font-weight: 600; cursor: pointer; }
+.poi .name:hover { color: var(--yellow); }
 .poi .meta { grid-column: 2; color: var(--muted); font-size: 12px; }
-.cat-h { margin: 10px 0 2px; font-weight: 600; }
+.cat-h { margin: 12px 0 2px; font-family: var(--display); font-weight: 800; font-style: italic; text-transform: uppercase; font-size: 15px; color: var(--yellow); }
 .wp { display: flex; justify-content: space-between; gap: 6px; padding: 3px 0; }
-.wp button { padding: 1px 7px; }
+.wp button { padding: 1px 8px; font-size: 13px; }
 .wx-line { margin: 2px 0; }
-.warn { color: var(--err); }
-.list button { margin: 3px 0; width: 100%; text-align: left; }
+.warn { color: var(--yellow); font-weight: 600; }
+.list button { margin: 3px 0; width: 100%; text-align: left; font-family: inherit; font-style: normal; text-transform: none; font-weight: 500; font-size: 13px; letter-spacing: 0; }
+
 #inbox { max-height: 420px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; padding: 4px 0; }
-.msg { max-width: 88%; padding: 6px 9px; border-radius: 10px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
-.msg.in { background: var(--bubble-in); align-self: flex-start; }
-.msg.out { background: var(--bubble-out); align-self: flex-end; }
-.msg.bot { background: var(--bubble-bot); align-self: flex-end; max-height: 160px; overflow-y: auto; }
-.msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 2px; }
-.msg img, .msg video { max-width: 100%; max-height: 220px; border-radius: 6px; display: block; cursor: pointer; }
+.msg { flex: 0 0 auto; max-width: 88%; padding: 7px 10px; border-radius: 3px; white-space: pre-wrap; word-break: break-word; font-size: 13px; }
+.msg.in { background: var(--bubble-in); align-self: flex-start; border-left: 3px solid var(--silver); }
+.msg.out { background: var(--bubble-out); align-self: flex-end; border-right: 3px solid var(--red); }
+.msg.bot { background: var(--bubble-bot); align-self: flex-end; border-right: 3px solid var(--yellow); max-height: 160px; overflow-y: auto; }
+.msg .meta { font-size: 11px; color: var(--muted); margin-bottom: 2px; text-transform: uppercase; letter-spacing: .5px; }
+.msg img, .msg video { max-width: 100%; max-height: 220px; border-radius: 2px; display: block; cursor: pointer; }
 .msg audio { max-width: 100%; }
-.msg a { color: inherit; }
-#status { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 9px 14px; border-radius: 8px; background: var(--text); color: var(--bg); font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 2000; }
-#status.show { opacity: .95; }
+.msg a, .box a { color: var(--yellow); }
+
+#status { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); max-width: calc(100% - 32px); padding: 10px 16px; border-radius: 3px; background: var(--yellow); color: #0a1638; font-weight: 600; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; z-index: 2000; box-shadow: 0 6px 20px rgba(0,0,0,.4); }
+#status.show { opacity: 1; }
 #status.err { background: var(--err); color: #fff; }
-.pin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
-.team-pin { padding: 2px 7px; border-radius: 6px; background: var(--accent); color: #fff; font-weight: 700; font-size: 12px; white-space: nowrap; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.4); }
+
+.pin { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 15px; border: 2px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.6); }
+.team-pin { padding: 3px 9px; border-radius: 2px; background: var(--red); color: #fff; font-family: var(--display); font-weight: 900; font-style: italic; text-transform: uppercase; font-size: 14px; white-space: nowrap; border: 2px solid var(--yellow); box-shadow: 0 2px 8px rgba(0,0,0,.6); }
+.leaflet-container { font-family: Barlow, system-ui, sans-serif; }
+.leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--panel); color: var(--text); border-radius: 3px; }
+.leaflet-popup-content a { color: var(--yellow); }
+.leaflet-bar a, .leaflet-control-layers { background: var(--panel); color: var(--text); border-color: var(--line); }
+.leaflet-control-layers-expanded { color: var(--text); }
+.leaflet-control-attribution { background: rgba(7,16,41,.8) !important; color: var(--muted); }
+.leaflet-control-attribution a { color: var(--silver); }
+footer.note { color: var(--muted); font-size: 11px; line-height: 1.5; }
 .hidden { display: none !important; }
 </style>
 </head>
 <body>
 <header>
-  <div>
-    <h1>🥫 CYMI Support-Zentrale</h1>
-    <div class="sub">Orte, Route, Wetter und Nachrichten für deine Creator-Teams über Telegram</div>
+  <div class="brand">
+    <div class="sun">🥫</div>
+    <div>
+      <h1>Can You Make It? <span>Support HQ</span></h1>
+      <div class="sub">Live-Standorte, Orte, Route, Wetter &amp; Telegram für deine Creator-Teams</div>
+    </div>
   </div>
   <span id="connPill" class="badge">offline</span>
 </header>
@@ -99,7 +166,7 @@ button:disabled { opacity: .5; cursor: wait; }
   <div id="panel">
 
     <details id="secConn" open>
-      <summary>0 · Telegram-Bot</summary>
+      <summary><span><span class="num">0</span>Telegram-Bot</span></summary>
       <div class="body">
         <div id="tokenRow">
           <label>Bot-Token vom @BotFather (einmal eingeben, bleibt in diesem Browser gespeichert)</label>
@@ -126,7 +193,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>1 · Team &amp; Standort</summary>
+      <summary><span><span class="num">1</span>Team &amp; Standort</span></summary>
       <div class="body">
         <div class="row">
           <select id="teamSel"></select>
@@ -166,7 +233,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details id="secInbox" open>
-      <summary>2 · Nachrichten <span id="inboxBadge" class="badge hidden"></span></summary>
+      <summary><span><span class="num">2</span>Nachrichten</span> <span id="inboxBadge" class="badge hidden"></span></summary>
       <div class="body">
         <div id="inbox"></div>
         <div class="row" style="margin-top:6px">
@@ -177,7 +244,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>3 · Ziel &amp; Route</summary>
+      <summary><span><span class="num">3</span>Ziel &amp; Route</span></summary>
       <div class="body">
         <div id="destBox" class="box"></div>
         <div id="wpBox"></div>
@@ -199,7 +266,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>4 · Orte finden</summary>
+      <summary><span><span class="num">4</span>Orte finden</span></summary>
       <div class="body">
         <div id="catBox" class="chips"></div>
         <div class="row" style="margin-top:8px">
@@ -232,7 +299,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>5 · Wetter</summary>
+      <summary><span><span class="num">5</span>Wetter</span></summary>
       <div class="body">
         <button id="wxGo" class="primary">Wetter laden</button>
         <span class="muted">Standort, Ziel und Punkte entlang der Route (zur voraussichtlichen Durchfahrtszeit)</span>
@@ -241,7 +308,7 @@ button:disabled { opacity: .5; cursor: wait; }
     </details>
 
     <details open>
-      <summary>6 · Update senden</summary>
+      <summary><span><span class="num">6</span>Update senden</span></summary>
       <div class="body">
         <label>In die Nachricht aufnehmen</label>
         <div class="chips">
@@ -267,7 +334,7 @@ button:disabled { opacity: .5; cursor: wait; }
       </div>
     </details>
 
-    <p class="muted">Daten: © OpenStreetMap-Mitwirkende (Overpass, Nominatim, OSRM via routing.openstreetmap.de), Karten: CARTO / Esri, Wetter: Open-Meteo. Der Bot antwortet nur, solange diese Seite geöffnet ist.</p>
+    <footer class="note">Inoffizielles Fan-Tool, nicht mit Red Bull verbunden. Daten: © OpenStreetMap-Mitwirkende (Overpass, Nominatim, OSRM via routing.openstreetmap.de), Karten: CARTO / Esri, Wetter: Open-Meteo. Der Bot antwortet nur, solange diese Seite geöffnet ist.</footer>
   </div>
 </main>
 <div id="status"></div>
@@ -646,14 +713,16 @@ const map = L.map('map').setView([50.5, 10.5], 5);
 // Die OSM-Kachelserver verlangen einen Referer und blockieren daher lokal geöffnete Dateien.
 const OSM_ATTR = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 const baseLayers = {
-  'Karte': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  'Karte (dunkel)': L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    maxZoom: 20, subdomains: 'abcd', attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
+  'Karte (hell)': L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
     maxZoom: 20, subdomains: 'abcd', attribution: OSM_ATTR + ' &copy; <a href="https://carto.com/attributions">CARTO</a>' }),
   'Satellit': L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
     maxZoom: 19, attribution: 'Tiles &copy; Esri' }),
   'OpenStreetMap (nur gehostet)': L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
     maxZoom: 19, attribution: OSM_ATTR }),
 };
-baseLayers['Karte'].addTo(map);
+baseLayers['Karte (dunkel)'].addTo(map);
 L.control.layers(baseLayers).addTo(map);
 const layers = {
   route: L.layerGroup().addTo(map),
@@ -677,7 +746,7 @@ function drawMarks() {
   }
   const t = activeTeam();
   if (!t) return;
-  if (t.dest) L.marker([t.dest.lat, t.dest.lon], { icon: pinIcon('🏁', '#111') }).bindPopup('Ziel: ' + esc(t.dest.label || ll(t.dest))).addTo(layers.marks);
+  if (t.dest) L.marker([t.dest.lat, t.dest.lon], { icon: pinIcon('🏁', '#db0a40') }).bindPopup('Ziel: ' + esc(t.dest.label || ll(t.dest))).addTo(layers.marks);
   t.waypoints.forEach((w, i) => L.marker([w.lat, w.lon], { icon: pinIcon(String(i + 1), '#455a64') }).bindPopup('Zwischenziel ' + (i + 1) + ': ' + esc(w.label || ll(w))).addTo(layers.marks));
 }
 
@@ -820,7 +889,7 @@ async function calcRoute(optimize) {
   }
   route = res.route;
   layers.route.clearLayers();
-  const pl = L.polyline(route.coords, { color: '#db0a40', weight: 5, opacity: 0.8 }).addTo(layers.route);
+  const pl = L.polyline(route.coords, { color: '#ffc906', weight: 5, opacity: 0.9 }).addTo(layers.route);
   map.fitBounds(pl.getBounds(), { padding: [30, 30] });
   const legs = route.legs.length > 1 ? '<br>' + route.legs.map((l, i) => `Etappe ${i + 1}: ${fmtDist(l.distance)} · ${fmtDur(l.duration)}`).join('<br>') : '';
   $('#routeBox').innerHTML = `<div class="box">🧭 <b>${fmtDist(route.distance)}</b> · ca. <b>${fmtDur(route.duration)}</b> (${PROFILES[route.profile].label})<br>
