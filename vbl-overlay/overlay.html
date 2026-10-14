@@ -1,0 +1,836 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>VBL Watchparty Overlay</title>
+<meta name="viewport" content="width=1920, height=1080">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --red: #ff1f45;
+    --red-2: #ff5a3c;
+    --cyan: #19e3ff;
+    --ink: #0a0d16;
+    --ink-2: #121828;
+    --glass: rgba(10, 13, 22, 0.82);
+    --line: rgba(255, 255, 255, 0.12);
+    --white: #f4f6fb;
+    --muted: #9aa3b8;
+    --home: #ff1f45;
+    --away: #2f7bff;
+    --display: 'Bebas Neue', 'Impact', 'Arial Narrow', sans-serif;
+    --ui: 'Rajdhani', 'Segoe UI', 'Arial', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: transparent; color: var(--white);
+    font-family: var(--ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  .scene { position: absolute; inset: 0; display: none; }
+  body[data-scene="main"] #scene-main,
+  body[data-scene="countdown"] #scene-countdown,
+  body[data-scene="pause"] #scene-pause { display: block; }
+
+  /* ---------- gemeinsame Bausteine ---------- */
+  .hide { opacity: 0 !important; transform: translateY(-20px) scale(.97) !important; pointer-events: none; }
+  .panel {
+    background: var(--glass);
+    border: 1px solid var(--line);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 18px 40px rgba(0,0,0,.45);
+    transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1.2);
+  }
+  .live-dot {
+    width: 12px; height: 12px; border-radius: 50%;
+    background: var(--red); box-shadow: 0 0 0 0 rgba(255,31,69,.7);
+    animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255,31,69,.7); }
+    70% { box-shadow: 0 0 0 14px rgba(255,31,69,0); }
+    100% { box-shadow: 0 0 0 0 rgba(255,31,69,0); }
+  }
+  .shine { position: relative; overflow: hidden; }
+  .shine::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.22), transparent);
+    transform: skewX(-20deg);
+    animation: sweep 6s ease-in-out infinite;
+  }
+  @keyframes sweep { 0%, 70% { left: -40%; } 100% { left: 140%; } }
+
+  /* Einflug beim Laden */
+  .enter { animation: enter .9s cubic-bezier(.2,.9,.2,1.1) both; }
+  .enter.d1 { animation-delay: .15s; } .enter.d2 { animation-delay: .3s; }
+  .enter.d3 { animation-delay: .45s; } .enter.d4 { animation-delay: .6s; }
+  .enter.d5 { animation-delay: .75s; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(-30px) scale(.94); filter: blur(6px); }
+    to { opacity: 1; transform: none; filter: none; }
+  }
+
+  /* ---------- Scoreboard (eigenes Match) ---------- */
+  #scoreboard { position: absolute; left: 40px; top: 36px; }
+  .sb-main { display: flex; align-items: stretch; height: 72px; clip-path: polygon(0 0, 100% 0, calc(100% - 18px) 100%, 18px 100%); }
+  .sb-tag {
+    width: 92px; display: grid; place-items: center;
+    font-family: var(--display); font-size: 40px; letter-spacing: 2px;
+    position: relative;
+  }
+  .sb-tag.home { background: var(--home); padding-left: 14px; }
+  .sb-tag.away { background: var(--away); padding-right: 14px; }
+  .sb-name {
+    min-width: 190px; padding: 0 22px; display: flex; align-items: center;
+    font-weight: 700; font-size: 28px; text-transform: uppercase; letter-spacing: 1px;
+    background: linear-gradient(180deg, #1a2133, #0d1220);
+    white-space: nowrap;
+  }
+  .sb-name.home { justify-content: flex-end; }
+  .sb-score {
+    display: flex; align-items: center; gap: 14px; padding: 0 22px;
+    background: linear-gradient(180deg, #fff, #d9dde8); color: var(--ink);
+    font-family: var(--display); font-size: 58px; line-height: 1;
+  }
+  .sb-score .sep { font-size: 40px; opacity: .45; }
+  .num { display: inline-block; min-width: 32px; text-align: center; }
+  .num.bump { animation: bump .9s cubic-bezier(.2,.9,.2,1.4); }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.8) rotate(-6deg); color: var(--red); text-shadow: 0 0 22px rgba(255,31,69,.8); }
+    100% { transform: scale(1); }
+  }
+  .sb-sub {
+    margin: 6px 18px 0; display: flex; justify-content: space-between; align-items: center; gap: 16px;
+    padding: 6px 16px; font-size: 18px; font-weight: 600; letter-spacing: 1.5px; text-transform: uppercase;
+    clip-path: polygon(0 0, 100% 0, calc(100% - 10px) 100%, 10px 100%);
+  }
+  .sb-sub .label { color: var(--muted); }
+  .record { display: flex; gap: 10px; }
+  .record b { font-weight: 700; }
+  .record .w b { color: #3dff8b; } .record .d b { color: #ffd23d; } .record .l b { color: #ff5a6e; }
+
+  /* ---------- VBL Header ---------- */
+  #vbl-header {
+    position: absolute; right: 40px; top: 36px; width: 640px; height: 72px;
+    display: flex; align-items: center; gap: 18px; padding: 0 22px;
+    border-left: 6px solid var(--red);
+  }
+  .vbl-badge {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--display); font-size: 30px; letter-spacing: 2px;
+    padding: 6px 14px 4px; background: var(--red); color: #fff;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .vbl-badge .live-dot { background: #fff; width: 10px; height: 10px; }
+  .vbl-titles { display: flex; flex-direction: column; line-height: 1; overflow: hidden; }
+  .vbl-titles .t { font-family: var(--display); font-size: 34px; letter-spacing: 2px; white-space: nowrap; }
+  .vbl-titles .s { font-size: 18px; color: var(--muted); font-weight: 600; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; }
+  .vbl-clock { margin-left: auto; font-family: var(--display); font-size: 32px; color: var(--muted); letter-spacing: 1px; }
+
+  /* ---------- Rahmen für Quellen (Bild-in-Bild + Kamera) ---------- */
+  .frame { position: absolute; transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1.2); }
+  .frame .border {
+    position: absolute; inset: -4px; border-radius: 6px; padding: 3px;
+    background: conic-gradient(from var(--a, 0deg), var(--red), transparent 25%, var(--cyan) 50%, transparent 75%, var(--red));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: spin 6s linear infinite;
+    filter: drop-shadow(0 0 8px rgba(255,31,69,.6));
+  }
+  @property --a { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+  @keyframes spin { to { --a: 360deg; } }
+  .frame .corner { position: absolute; width: 34px; height: 34px; border: 5px solid #fff; }
+  .frame .c1 { left: -12px; top: -12px; border-right: 0; border-bottom: 0; }
+  .frame .c2 { right: -12px; top: -12px; border-left: 0; border-bottom: 0; }
+  .frame .c3 { left: -12px; bottom: -12px; border-right: 0; border-top: 0; }
+  .frame .c4 { right: -12px; bottom: -12px; border-left: 0; border-top: 0; }
+  .frame .tag {
+    position: absolute; left: 16px; bottom: -18px; padding: 4px 14px 2px;
+    font-family: var(--display); font-size: 24px; letter-spacing: 2px;
+    background: var(--red); display: flex; align-items: center; gap: 8px;
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .frame .tag.alt { background: var(--white); color: var(--ink); }
+  #pip { right: 40px; top: 132px; width: 640px; height: 360px; }
+  #cam { left: 40px; bottom: 100px; width: 400px; height: 300px; }
+
+  /* ---------- VBL Konferenz-Tabelle ---------- */
+  #vbl-table { position: absolute; right: 40px; top: 526px; width: 640px; padding: 14px 0 8px; }
+  .vt-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px 10px; font-family: var(--display); font-size: 26px; letter-spacing: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vt-head span:last-child { font-family: var(--ui); font-size: 16px; color: var(--muted); font-weight: 600; }
+  .vt-row {
+    display: grid; grid-template-columns: 1fr 120px 1fr 92px; align-items: center;
+    height: 50px; padding: 0 20px; position: relative;
+    font-weight: 700; font-size: 26px; letter-spacing: 1px;
+    animation: rowIn .6s cubic-bezier(.2,.9,.2,1.1) both;
+  }
+  .vt-row + .vt-row { border-top: 1px solid rgba(255,255,255,.05); }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+  .vt-row .h { text-align: right; padding-right: 14px; }
+  .vt-row .a { text-align: left; padding-left: 14px; }
+  .vt-row .sc {
+    justify-self: center; font-family: var(--display); font-size: 32px; letter-spacing: 2px;
+    background: rgba(255,255,255,.08); padding: 2px 14px 0; border-radius: 4px; min-width: 96px; text-align: center;
+  }
+  .vt-row .st {
+    justify-self: end; font-size: 16px; font-weight: 700; letter-spacing: 1px;
+    padding: 3px 10px; border-radius: 3px; background: rgba(255,255,255,.08); color: var(--muted);
+  }
+  .vt-row .st.live { background: rgba(255,31,69,.18); color: #ff7b90; }
+  .vt-row.flash::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(255,31,69,.55), transparent);
+    animation: rowFlash 2.4s ease-out;
+  }
+  .vt-row.flash .sc { animation: scFlash 2.4s ease-out; }
+  @keyframes rowFlash { 0% { opacity: 0; transform: translateX(-100%); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%); } }
+  @keyframes scFlash { 0%, 60% { background: var(--red); color: #fff; transform: scale(1.12); } 100% { transform: none; } }
+
+  /* ---------- Ticker unten ---------- */
+  #ticker {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, rgba(10,13,22,.92), rgba(5,7,12,.96));
+    border-top: 2px solid var(--red);
+  }
+  .tk-label {
+    flex: none; display: flex; align-items: center; gap: 12px; padding: 0 34px 0 40px;
+    font-family: var(--display); font-size: 30px; letter-spacing: 3px;
+    background: linear-gradient(90deg, var(--red), var(--red-2));
+    clip-path: polygon(0 0, 100% 0, calc(100% - 24px) 100%, 0 100%);
+  }
+  .tk-track { flex: 1; overflow: hidden; position: relative; -webkit-mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .tk-move { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+  .tk-item { display: inline-flex; align-items: center; gap: 14px; padding: 0 28px; font-size: 25px; font-weight: 600; letter-spacing: .5px; }
+  .tk-item .ball { color: var(--red); font-size: 16px; }
+  .tk-item b { font-family: var(--display); font-size: 28px; letter-spacing: 1.5px; color: #fff; }
+  .tk-social {
+    flex: none; display: flex; align-items: center; padding: 0 40px 0 30px;
+    font-family: var(--display); font-size: 28px; letter-spacing: 2px; color: var(--cyan);
+    border-left: 1px solid var(--line);
+  }
+
+  /* ---------- Toast (VBL-Tor) ---------- */
+  #toast {
+    position: absolute; left: 40px; top: 176px; transform: translateX(-120%);
+    display: flex; align-items: stretch; height: 84px;
+    transition: transform .7s cubic-bezier(.2,.9,.2,1.25);
+    filter: drop-shadow(0 18px 30px rgba(0,0,0,.5));
+  }
+  #toast.show { transform: none; }
+  #toast .ic {
+    width: 96px; display: grid; place-items: center; background: var(--red);
+    font-family: var(--display); font-size: 30px; letter-spacing: 1px; line-height: .9; text-align: center;
+  }
+  #toast .tx {
+    background: #fff; color: var(--ink); padding: 0 34px; display: flex; flex-direction: column; justify-content: center;
+    min-width: 380px;
+  }
+  #toast .tx small { font-size: 17px; font-weight: 700; letter-spacing: 2px; color: var(--red); text-transform: uppercase; }
+  #toast .tx strong { font-family: var(--display); font-size: 42px; letter-spacing: 2px; line-height: 1; }
+
+  /* ---------- Fullscreen-Effekte ---------- */
+  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+  #confetti { position: absolute; inset: 0; z-index: 60; pointer-events: none; }
+
+  .goal { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .goal.run { display: block; }
+  .goal .flash { position: absolute; inset: 0; background: #fff; opacity: 0; animation: gFlash .5s ease-out; }
+  @keyframes gFlash { 0% { opacity: .85; } 100% { opacity: 0; } }
+  .goal .band {
+    position: absolute; left: -10%; right: -10%; top: 50%; height: 360px; margin-top: -180px;
+    background: linear-gradient(90deg, var(--gc), color-mix(in srgb, var(--gc) 60%, #000));
+    transform: skewY(-6deg) scaleX(0); transform-origin: left;
+    animation: band 3.8s cubic-bezier(.7,0,.2,1) forwards;
+    box-shadow: 0 0 120px color-mix(in srgb, var(--gc) 70%, transparent);
+  }
+  .goal .band.b2 {
+    height: 380px; margin-top: -190px; background: #fff; opacity: .9; animation-delay: .06s;
+    animation-name: band2;
+  }
+  @keyframes band {
+    0% { transform: skewY(-6deg) scaleX(0); transform-origin: left; }
+    14% { transform: skewY(-6deg) scaleX(1); transform-origin: left; }
+    80% { transform: skewY(-6deg) scaleX(1); transform-origin: right; }
+    100% { transform: skewY(-6deg) scaleX(0); transform-origin: right; }
+  }
+  @keyframes band2 {
+    0% { transform: skewY(-6deg) scaleX(0); transform-origin: left; }
+    12% { transform: skewY(-6deg) scaleX(1); transform-origin: left; }
+    13% { transform: skewY(-6deg) scaleX(1); transform-origin: right; }
+    24% { transform: skewY(-6deg) scaleX(0); transform-origin: right; }
+    100% { transform: skewY(-6deg) scaleX(0); }
+  }
+  .goal .word {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-62%) skewY(-6deg);
+    display: flex; justify-content: center; gap: 4px;
+    font-family: var(--display); font-size: 300px; line-height: 1; letter-spacing: 6px;
+    color: #fff; text-shadow: 0 10px 0 rgba(0,0,0,.25), 0 0 60px rgba(255,255,255,.35);
+  }
+  .goal .word span { display: inline-block; opacity: 0; animation: letter 3.6s cubic-bezier(.2,.9,.2,1.3) forwards; }
+  @keyframes letter {
+    0% { opacity: 0; transform: translateY(160px) scale(.4) rotate(12deg); }
+    12% { opacity: 1; transform: translateY(-18px) scale(1.12) rotate(-3deg); }
+    18% { transform: none; }
+    70% { opacity: 1; transform: none; }
+    82% { opacity: 1; transform: translateX(0); }
+    100% { opacity: 0; transform: translateX(260px) skewX(-20deg); }
+  }
+  .goal .who {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(110px) skewY(-6deg);
+    text-align: center; font-family: var(--display); font-size: 64px; letter-spacing: 12px; color: #fff;
+    opacity: 0; animation: who 3.6s ease forwards;
+  }
+  @keyframes who { 0%, 18% { opacity: 0; letter-spacing: 40px; } 30% { opacity: 1; letter-spacing: 12px; } 75% { opacity: 1; } 90%, 100% { opacity: 0; } }
+  .goal .ring {
+    position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px 0 0 -100px;
+    border-radius: 50%; border: 14px solid #fff; opacity: 0;
+    animation: ring 1.2s ease-out .1s;
+  }
+  .goal .ring.r2 { animation-delay: .3s; border-color: var(--gc); }
+  @keyframes ring { 0% { opacity: .9; transform: scale(.2); } 100% { opacity: 0; transform: scale(9); } }
+  body.shake #scene-main { animation: shake .5s; }
+  @keyframes shake {
+    10%, 90% { transform: translate(-3px, 2px); } 20%, 80% { transform: translate(6px, -4px); }
+    30%, 50%, 70% { transform: translate(-10px, 6px); } 40%, 60% { transform: translate(10px, -6px); }
+  }
+
+  /* Intro-Sting "VBL ist zurück" */
+  .intro { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .intro.run { display: block; }
+  .intro .slice {
+    position: absolute; left: 0; right: 0; height: 20%;
+    background: var(--ink); transform: translateX(-101%);
+    animation: slice 4.6s cubic-bezier(.75,0,.2,1) forwards;
+  }
+  .intro .slice:nth-child(even) { background: #10162a; transform: translateX(101%); animation-name: sliceR; }
+  .intro .slice:nth-child(1) { top: 0; animation-delay: 0s; }
+  .intro .slice:nth-child(2) { top: 20%; animation-delay: .05s; }
+  .intro .slice:nth-child(3) { top: 40%; animation-delay: .1s; }
+  .intro .slice:nth-child(4) { top: 60%; animation-delay: .15s; }
+  .intro .slice:nth-child(5) { top: 80%; animation-delay: .2s; }
+  @keyframes slice { 0% { transform: translateX(-101%); } 12%, 84% { transform: none; } 100% { transform: translateX(101%); } }
+  @keyframes sliceR { 0% { transform: translateX(101%); } 12%, 84% { transform: none; } 100% { transform: translateX(-101%); } }
+  .intro .stripe {
+    position: absolute; left: -20%; right: -20%; top: 50%; height: 12px; margin-top: 150px;
+    background: linear-gradient(90deg, transparent, var(--red), var(--cyan), transparent);
+    transform: scaleX(0); animation: stripe 4.6s ease forwards .5s;
+  }
+  @keyframes stripe { 0% { transform: scaleX(0); } 20%, 75% { transform: scaleX(1); } 90%, 100% { transform: scaleX(0); opacity: 0; } }
+  .intro .big {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: var(--display); line-height: .9; text-align: center;
+  }
+  .intro .l1 { font-size: 120px; letter-spacing: 30px; color: var(--muted); opacity: 0; animation: introL1 4.6s ease forwards .45s; }
+  .intro .l2 {
+    font-size: 260px; letter-spacing: 8px; color: #fff; opacity: 0; position: relative;
+    animation: introL2 4.6s cubic-bezier(.2,.9,.2,1.2) forwards .6s;
+    text-shadow: 0 0 40px rgba(255,31,69,.6);
+  }
+  .intro .l2::before, .intro .l2::after {
+    content: attr(data-t); position: absolute; inset: 0; opacity: .8;
+  }
+  .intro .l2::before { color: var(--red); transform: translate(-6px, 0); mix-blend-mode: screen; animation: glitch 1.4s steps(2) infinite; }
+  .intro .l2::after { color: var(--cyan); transform: translate(6px, 0); mix-blend-mode: screen; animation: glitch 1.1s steps(2) infinite reverse; }
+  @keyframes glitch {
+    0% { clip-path: inset(10% 0 70% 0); } 25% { clip-path: inset(60% 0 10% 0); }
+    50% { clip-path: inset(30% 0 40% 0); } 75% { clip-path: inset(80% 0 5% 0); } 100% { clip-path: inset(0 0 90% 0); }
+  }
+  @keyframes introL1 { 0% { opacity: 0; letter-spacing: 80px; } 18% { opacity: 1; letter-spacing: 30px; } 78% { opacity: 1; } 88%, 100% { opacity: 0; } }
+  @keyframes introL2 { 0% { opacity: 0; transform: scale(2.4); filter: blur(20px); } 14% { opacity: 1; transform: none; filter: none; } 76% { opacity: 1; transform: scale(1.04); } 88%, 100% { opacity: 0; transform: scale(.8); filter: blur(10px); } }
+  .intro .l3 { margin-top: 26px; font-family: var(--ui); font-weight: 700; font-size: 34px; letter-spacing: 10px; color: var(--cyan); text-transform: uppercase; opacity: 0; animation: introL1 4.6s ease forwards .9s; }
+
+  /* ---------- Hintergrund-Szenen (Countdown / Pause) ---------- */
+  .stage { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(1200px 700px at 50% 120%, #2a0b18 0%, #0a0d16 55%, #05070c 100%); }
+  .stage .blob { position: absolute; border-radius: 50%; filter: blur(90px); opacity: .55; animation: float 14s ease-in-out infinite alternate; }
+  .stage .b1 { width: 700px; height: 700px; left: -150px; top: -200px; background: var(--red); }
+  .stage .b2 { width: 600px; height: 600px; right: -120px; bottom: -180px; background: #1b3cff; animation-delay: -5s; }
+  .stage .b3 { width: 420px; height: 420px; left: 55%; top: 20%; background: var(--cyan); opacity: .25; animation-delay: -9s; }
+  @keyframes float { from { transform: translate(0, 0) scale(1); } to { transform: translate(120px, 80px) scale(1.2); } }
+  .stage .pitch {
+    position: absolute; left: -50%; right: -50%; bottom: -10%; height: 70%;
+    background-image:
+      linear-gradient(rgba(255,255,255,.08) 2px, transparent 2px),
+      linear-gradient(90deg, rgba(255,255,255,.08) 2px, transparent 2px);
+    background-size: 120px 120px;
+    transform: perspective(600px) rotateX(62deg);
+    transform-origin: bottom;
+    animation: grid 4s linear infinite;
+    -webkit-mask: linear-gradient(transparent, #000 40%);
+  }
+  @keyframes grid { to { background-position: 0 120px, 0 0; } }
+  .stage .beam {
+    position: absolute; top: -20%; width: 260px; height: 140%;
+    background: linear-gradient(180deg, rgba(255,255,255,.18), transparent 70%);
+    filter: blur(20px); transform-origin: top center; animation: beam 9s ease-in-out infinite alternate;
+  }
+  .stage .bm1 { left: 18%; transform: rotate(18deg); }
+  .stage .bm2 { right: 18%; transform: rotate(-18deg); animation-delay: -4s; }
+  @keyframes beam { from { opacity: .3; } to { opacity: .9; } }
+  .stage canvas { position: absolute; inset: 0; }
+
+  .cd-wrap { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+  .cd-kicker {
+    display: flex; align-items: center; gap: 14px; padding: 10px 24px 8px; background: var(--red);
+    font-family: var(--display); font-size: 34px; letter-spacing: 4px;
+    clip-path: polygon(12px 0, 100% 0, calc(100% - 12px) 100%, 0 100%);
+  }
+  .cd-kicker .live-dot { background: #fff; }
+  .cd-head {
+    margin-top: 8px; padding-top: 20px; font-family: var(--display); font-size: 170px; line-height: 1; letter-spacing: 6px;
+    background: linear-gradient(180deg, #fff 30%, #ffb3c0 100%); -webkit-background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 40px rgba(255,31,69,.45));
+  }
+  .cd-sub { margin-top: 16px; font-size: 38px; font-weight: 600; letter-spacing: 6px; color: var(--muted); text-transform: uppercase; }
+  .cd-timer { margin-top: 54px; display: flex; gap: 22px; }
+  .cd-box {
+    width: 190px; padding: 18px 0 12px; text-align: center;
+    background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+    box-shadow: inset 0 0 40px rgba(255,31,69,.12);
+  }
+  .cd-box .v { font-family: var(--display); font-size: 130px; line-height: .9; }
+  .cd-box .k { font-size: 20px; font-weight: 700; letter-spacing: 4px; color: var(--muted); }
+  .cd-box .v.tick { animation: tick .5s ease-out; }
+  @keyframes tick { from { transform: translateY(-12px); opacity: .3; } to { transform: none; opacity: 1; } }
+  .cd-colon { font-family: var(--display); font-size: 120px; line-height: 1.2; color: var(--red); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .cd-done { margin-top: 54px; font-family: var(--display); font-size: 120px; letter-spacing: 8px; color: #fff; animation: donePulse 1.4s ease-in-out infinite; display: none; }
+  @keyframes donePulse { 50% { transform: scale(1.06); text-shadow: 0 0 50px rgba(255,31,69,.9); } }
+  .cd-matches { position: absolute; left: 0; right: 0; bottom: 110px; display: flex; justify-content: center; gap: 18px; }
+  .cd-match {
+    padding: 12px 22px; background: rgba(10,13,22,.7); border: 1px solid var(--line); border-radius: 8px;
+    font-size: 26px; font-weight: 700; letter-spacing: 1px; display: flex; gap: 12px; align-items: center;
+    animation: rowIn .8s cubic-bezier(.2,.9,.2,1.1) both;
+  }
+  .cd-match em { font-style: normal; font-family: var(--display); font-size: 30px; color: var(--red); }
+</style>
+</head>
+<body data-scene="main">
+
+<!-- ================== HAUPTSZENE ================== -->
+<div class="scene" id="scene-main">
+
+  <div id="scoreboard" class="panel enter" style="background:none;border:0;box-shadow:none;backdrop-filter:none">
+    <div class="sb-main shine">
+      <div class="sb-tag home" id="sbHomeTag">SDX</div>
+      <div class="sb-name home" id="sbHomeName">SODIX</div>
+      <div class="sb-score"><span class="num" id="sbHomeScore">0</span><span class="sep">:</span><span class="num" id="sbAwayScore">0</span></div>
+      <div class="sb-name away" id="sbAwayName">GEGNER</div>
+      <div class="sb-tag away" id="sbAwayTag">GEG</div>
+    </div>
+    <div class="sb-sub panel">
+      <span class="label" id="sbLabel">FC 26</span>
+      <span class="record" id="sbRecord"><span class="w">S <b id="rW">0</b></span><span class="d">U <b id="rD">0</b></span><span class="l">N <b id="rL">0</b></span></span>
+    </div>
+  </div>
+
+  <div id="vbl-header" class="panel enter d1">
+    <div class="vbl-badge"><span class="live-dot"></span>VBL LIVE</div>
+    <div class="vbl-titles"><span class="t" id="vblTitle">VIRTUELLE BUNDESLIGA</span><span class="s" id="vblSub">Club Championship</span></div>
+    <div class="vbl-clock" id="clock">20:00</div>
+  </div>
+
+  <div id="pip" class="frame enter d2">
+    <div class="border"></div>
+    <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+    <div class="tag"><span class="live-dot" style="background:#fff;width:9px;height:9px"></span>VBL LIVESTREAM</div>
+  </div>
+
+  <div id="vbl-table" class="panel enter d3">
+    <div class="vt-head"><span>KONFERENZ</span><span id="vtCount">5 SPIELE</span></div>
+    <div id="vtRows"></div>
+  </div>
+
+  <div id="cam" class="frame enter d4">
+    <div class="border"></div>
+    <div class="corner c1"></div><div class="corner c2"></div><div class="corner c3"></div><div class="corner c4"></div>
+    <div class="tag alt" id="camTag">SODIX</div>
+  </div>
+
+  <div id="ticker" class="enter d5">
+    <div class="tk-label"><span class="live-dot" style="background:#fff"></span>VBL TICKER</div>
+    <div class="tk-track"><div class="tk-move" id="tkMove"></div></div>
+    <div class="tk-social" id="tkSocial">@sodix2006</div>
+  </div>
+
+  <div id="toast">
+    <div class="ic">TOR<br>VBL</div>
+    <div class="tx"><small id="toastSmall">Tor in der VBL</small><strong id="toastText">FCB 1 : 0 BVB</strong></div>
+  </div>
+</div>
+
+<!-- ================== COUNTDOWN ================== -->
+<div class="scene" id="scene-countdown">
+  <div class="stage">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <div class="beam bm1"></div><div class="beam bm2"></div>
+    <div class="pitch"></div>
+    <canvas class="sparks"></canvas>
+  </div>
+  <div class="cd-wrap">
+    <div class="cd-kicker enter"><span class="live-dot"></span><span id="cdKicker">VIRTUELLE BUNDESLIGA</span></div>
+    <div class="cd-head enter d1" id="cdHead">DIE VBL IST ZURÜCK</div>
+    <div class="cd-sub enter d2" id="cdSub">Der Stream startet gleich</div>
+    <div class="cd-timer enter d3" id="cdTimer">
+      <div class="cd-box"><div class="v" id="cdH">00</div><div class="k">STUNDEN</div></div>
+      <div class="cd-colon">:</div>
+      <div class="cd-box"><div class="v" id="cdM">05</div><div class="k">MINUTEN</div></div>
+      <div class="cd-colon">:</div>
+      <div class="cd-box"><div class="v" id="cdS">00</div><div class="k">SEKUNDEN</div></div>
+    </div>
+    <div class="cd-done" id="cdDone">GLEICH GEHT’S LOS</div>
+  </div>
+  <div class="cd-matches" id="cdMatches"></div>
+</div>
+
+<!-- ================== PAUSE ================== -->
+<div class="scene" id="scene-pause">
+  <div class="stage">
+    <div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div>
+    <div class="beam bm1"></div><div class="beam bm2"></div>
+    <div class="pitch"></div>
+    <canvas class="sparks"></canvas>
+  </div>
+  <div class="cd-wrap">
+    <div class="cd-kicker enter"><span class="live-dot"></span>VBL WATCHPARTY</div>
+    <div class="cd-head enter d1" id="pHead">KURZE PAUSE</div>
+    <div class="cd-sub enter d2" id="pSub">Bin gleich wieder da</div>
+  </div>
+  <div class="cd-matches" id="pMatches"></div>
+</div>
+
+<!-- ================== EFFEKTE ================== -->
+<div id="fx">
+  <div class="goal" id="goal">
+    <div class="flash"></div>
+    <div class="ring"></div><div class="ring r2"></div>
+    <div class="band b2"></div>
+    <div class="band"></div>
+    <div class="word" id="goalWord"></div>
+    <div class="who" id="goalWho">SODIX</div>
+  </div>
+  <div class="intro" id="intro">
+    <div class="slice"></div><div class="slice"></div><div class="slice"></div><div class="slice"></div><div class="slice"></div>
+    <div class="stripe"></div>
+    <div class="big">
+      <div class="l1">DIE</div>
+      <div class="l2" data-t="VBL">VBL</div>
+      <div class="l3">ist zurück</div>
+    </div>
+  </div>
+</div>
+<canvas id="confetti" width="1920" height="1080"></canvas>
+
+<script src="shared.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const params = new URLSearchParams(location.search);
+  const scene = params.get('scene') || 'main';
+  document.body.dataset.scene = scene;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+
+  let prev = null;
+  let state = null;
+
+  // ---------------- Rendern ----------------
+  function render(s) {
+    const me = s.me;
+    document.documentElement.style.setProperty('--home', me.homeColor);
+    document.documentElement.style.setProperty('--away', me.awayColor);
+    $('sbHomeTag').textContent = me.homeTag;
+    $('sbAwayTag').textContent = me.awayTag;
+    $('sbHomeName').textContent = me.homeName;
+    $('sbAwayName').textContent = me.awayName;
+    $('sbHomeScore').textContent = me.homeScore;
+    $('sbAwayScore').textContent = me.awayScore;
+    $('sbLabel').textContent = me.label;
+    $('rW').textContent = s.record.w; $('rD').textContent = s.record.d; $('rL').textContent = s.record.l;
+    $('camTag').textContent = me.homeName;
+
+    $('vblTitle').textContent = s.vbl.title;
+    $('vblSub').textContent = s.vbl.subtitle;
+    $('cdKicker').textContent = s.vbl.title;
+
+    // Sichtbarkeit
+    const vis = { scoreboard: 'scoreboard', vblHeader: 'vbl-header', pip: 'pip', vblTable: 'vbl-table', cam: 'cam', ticker: 'ticker' };
+    for (const [k, id] of Object.entries(vis)) $(id).classList.toggle('hide', !s.show[k]);
+    $('sbRecord').style.display = s.show.record ? '' : 'none';
+
+    renderTable(s);
+    renderTicker(s);
+    renderSceneTexts(s);
+
+    // Eigene Tore erkennen -> große Animation
+    if (prev) {
+      if (me.homeScore > prev.me.homeScore) { bump('sbHomeScore'); if (me.goalAnim) goal(me.homeName, me.homeColor); }
+      if (me.awayScore > prev.me.awayScore) { bump('sbAwayScore'); if (me.goalAnim) goal(me.awayName, me.awayColor); }
+      if (me.homeScore < prev.me.homeScore || me.awayScore < prev.me.awayScore) { bump('sbHomeScore'); bump('sbAwayScore'); }
+    }
+    prev = VBL.clone(s);
+  }
+
+  function bump(id) { restart($(id), 'bump'); }
+
+  let lastTableKey = '';
+  function renderTable(s) {
+    const ms = s.vbl.matches || [];
+    $('vtCount').textContent = ms.length + (ms.length === 1 ? ' SPIEL' : ' SPIELE');
+    const key = JSON.stringify(ms);
+    if (key === lastTableKey) return;
+    const oldById = {};
+    (prev?.vbl.matches || []).forEach((m) => { oldById[m.id] = m; });
+    const first = !lastTableKey;
+    lastTableKey = key;
+
+    const rows = $('vtRows');
+    // vorhandene Zeilen wiederverwenden, damit die Einflug-Animation nicht jedes Mal neu läuft
+    const existing = {};
+    rows.querySelectorAll('.vt-row').forEach((r) => { existing[r.dataset.id] = r; });
+    const frag = document.createDocumentFragment();
+    ms.forEach((m, i) => {
+      let r = existing[m.id];
+      if (!r) {
+        r = document.createElement('div');
+        r.className = 'vt-row';
+        r.dataset.id = m.id;
+        r.style.animationDelay = first ? (0.9 + i * 0.08) + 's' : '0s';
+        r.innerHTML = '<span class="h"></span><span class="sc"></span><span class="a"></span><span class="st"></span>';
+      }
+      delete existing[m.id];
+      r.querySelector('.h').textContent = m.home;
+      r.querySelector('.a').textContent = m.away;
+      r.querySelector('.sc').textContent = m.hs + ' : ' + m.as;
+      const st = r.querySelector('.st');
+      st.textContent = m.status || '';
+      st.classList.toggle('live', /live|\d+'/i.test(m.status || ''));
+      frag.appendChild(r);
+
+      const o = oldById[m.id];
+      if (o && (m.hs > o.hs || m.as > o.as)) {
+        restart(r, 'flash');
+        const scorer = m.hs > o.hs ? m.home : m.away;
+        toast('Tor für ' + scorer, m.home + '  ' + m.hs + ' : ' + m.as + '  ' + m.away);
+      }
+    });
+    Object.values(existing).forEach((r) => r.remove());
+    rows.appendChild(frag);
+    renderMatchChips(s);
+  }
+
+  function renderMatchChips(s) {
+    const html = (s.vbl.matches || []).slice(0, 5).map((m, i) =>
+      `<div class="cd-match" style="animation-delay:${1 + i * .1}s">${esc(m.home)} <em>${esc(m.hs)}:${esc(m.as)}</em> ${esc(m.away)}</div>`).join('');
+    $('cdMatches').innerHTML = html;
+    $('pMatches').innerHTML = html;
+  }
+
+  // ---------------- Ticker ----------------
+  let tickerKey = '';
+  let tickerX = 0;
+  let tickerW = 0;
+  function renderTicker(s) {
+    const results = (s.vbl.matches || []).map((m) => `<b>${esc(m.home)} ${esc(m.hs)}:${esc(m.as)} ${esc(m.away)}</b>`).join('<span class="ball">●</span>');
+    const items = (s.ticker || []).filter(Boolean).map((t) => esc(t));
+    if (results) items.push(results);
+    const key = items.join('|') + s.social;
+    $('tkSocial').textContent = s.social;
+    if (key === tickerKey) return;
+    tickerKey = key;
+    const one = items.map((t) => `<span class="tk-item"><span class="ball">⚽</span>${t}</span>`).join('');
+    const move = $('tkMove');
+    move.innerHTML = one + one; // doppelt für nahtlose Schleife
+    tickerW = move.scrollWidth / 2;
+    if (tickerX < -tickerW) tickerX = 0;
+  }
+  let lastT = performance.now();
+  function tickLoop(t) {
+    const dt = Math.min(64, t - lastT); lastT = t;
+    if (tickerW > 0) {
+      tickerX -= dt * 0.09; // Pixel pro ms
+      if (tickerX <= -tickerW) tickerX += tickerW;
+      $('tkMove').style.transform = `translateX(${tickerX}px)`;
+    }
+    requestAnimationFrame(tickLoop);
+  }
+  requestAnimationFrame(tickLoop);
+
+  // ---------------- Uhr ----------------
+  function clock() {
+    const d = new Date();
+    $('clock').textContent = d.toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' });
+  }
+  clock(); setInterval(clock, 5000);
+
+  // ---------------- Countdown / Pause ----------------
+  function renderSceneTexts(s) {
+    $('cdHead').textContent = s.countdown.headline;
+    $('cdSub').textContent = s.countdown.sub;
+    $('cdDone').textContent = s.countdown.done;
+    $('pHead').textContent = s.pause.headline;
+    $('pSub').textContent = s.pause.sub;
+  }
+  const pad = (n) => String(n).padStart(2, '0');
+  const lastCd = {};
+  function setCd(id, v) {
+    if (lastCd[id] === v) return;
+    lastCd[id] = v;
+    const el = $(id); el.textContent = v; restart(el, 'tick');
+  }
+  function countdownLoop() {
+    if (!state) return;
+    let target = state.countdown.target ? new Date(state.countdown.target).getTime() : NaN;
+    if (isNaN(target)) target = startedAt + 5 * 60 * 1000; // ohne Zielzeit: 5 Minuten ab Laden
+    const left = Math.max(0, Math.round((target - Date.now()) / 1000));
+    const done = left === 0;
+    $('cdTimer').style.display = done ? 'none' : '';
+    $('cdDone').style.display = done ? 'block' : 'none';
+    setCd('cdH', pad(Math.floor(left / 3600)));
+    setCd('cdM', pad(Math.floor(left / 60) % 60));
+    setCd('cdS', pad(left % 60));
+  }
+  const startedAt = Date.now();
+  setInterval(countdownLoop, 250);
+
+  // ---------------- Toast ----------------
+  const toastQueue = [];
+  let toastBusy = false;
+  function toast(small, text) {
+    toastQueue.push([small, text]);
+    if (!toastBusy) nextToast();
+  }
+  function nextToast() {
+    const t = toastQueue.shift();
+    if (!t) { toastBusy = false; return; }
+    toastBusy = true;
+    $('toastSmall').textContent = t[0];
+    $('toastText').textContent = t[1];
+    $('toast').classList.add('show');
+    setTimeout(() => { $('toast').classList.remove('show'); setTimeout(nextToast, 800); }, 4500);
+  }
+
+  // ---------------- Tor-Animation ----------------
+  let goalTimer = null;
+  function goal(name, color) {
+    if (scene !== 'main') return;
+    const g = $('goal');
+    g.style.setProperty('--gc', color || '#ff1f45');
+    const word = 'TOOOR!';
+    $('goalWord').innerHTML = [...word].map((c, i) => `<span style="animation-delay:${0.12 + i * 0.06}s">${c}</span>`).join('');
+    $('goalWho').textContent = name;
+    g.classList.remove('run'); void g.offsetWidth; g.classList.add('run');
+    restart(document.body, 'shake');
+    confetti(color);
+    clearTimeout(goalTimer);
+    goalTimer = setTimeout(() => { g.classList.remove('run'); document.body.classList.remove('shake'); }, 4200);
+  }
+
+  // ---------------- Intro ----------------
+  let introTimer = null;
+  function intro() {
+    const el = $('intro');
+    el.classList.remove('run'); void el.offsetWidth; el.classList.add('run');
+    clearTimeout(introTimer);
+    introTimer = setTimeout(() => el.classList.remove('run'), 5800);
+    setTimeout(() => confetti('#ff1f45', 140), 900);
+  }
+
+  // ---------------- Konfetti ----------------
+  const cv = $('confetti');
+  const cx = cv.getContext('2d');
+  let parts = [];
+  let confettiRunning = false;
+  function confetti(color, n = 260) {
+    const cols = [color || '#ff1f45', '#ffffff', '#19e3ff', '#ffd23d'];
+    for (let i = 0; i < n; i++) {
+      const fromLeft = i % 2 === 0;
+      parts.push({
+        x: fromLeft ? -20 : 1940, y: 700 + Math.random() * 300,
+        vx: (fromLeft ? 1 : -1) * (8 + Math.random() * 16), vy: -(14 + Math.random() * 16),
+        w: 8 + Math.random() * 10, h: 4 + Math.random() * 8,
+        r: Math.random() * Math.PI, vr: (Math.random() - .5) * .4,
+        c: cols[i % cols.length], life: 0,
+      });
+    }
+    if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(confettiLoop); }
+  }
+  function confettiLoop() {
+    cx.clearRect(0, 0, 1920, 1080);
+    parts = parts.filter((p) => p.y < 1140 && p.life < 400);
+    for (const p of parts) {
+      p.life++; p.vy += 0.42; p.vx *= 0.985; p.vy *= 0.99;
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r);
+      cx.scale(1, Math.cos(p.life * 0.18));
+      cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cx.restore();
+    }
+    if (parts.length) requestAnimationFrame(confettiLoop);
+    else { confettiRunning = false; cx.clearRect(0, 0, 1920, 1080); }
+  }
+
+  // ---------------- Funken im Hintergrund ----------------
+  document.querySelectorAll('.scene').forEach((sc) => {
+    if (sc.id !== 'scene-' + scene) return;
+    const c = sc.querySelector('canvas.sparks');
+    if (!c) return;
+    c.width = 1920; c.height = 1080;
+    const x = c.getContext('2d');
+    const dots = Array.from({ length: 90 }, () => ({
+      x: Math.random() * 1920, y: Math.random() * 1080, s: .5 + Math.random() * 2.2,
+      v: .2 + Math.random() * .8, a: Math.random() * Math.PI * 2,
+    }));
+    (function loop() {
+      x.clearRect(0, 0, 1920, 1080);
+      for (const d of dots) {
+        d.y -= d.v; d.a += .02; d.x += Math.sin(d.a) * .4;
+        if (d.y < -10) { d.y = 1090; d.x = Math.random() * 1920; }
+        x.beginPath(); x.arc(d.x, d.y, d.s, 0, Math.PI * 2);
+        x.fillStyle = `rgba(255,${120 + d.s * 40 | 0},${140 + d.s * 30 | 0},${.25 + d.s * .2})`;
+        x.fill();
+      }
+      requestAnimationFrame(loop);
+    })();
+  });
+
+  // ---------------- Verbindung zum Steuerpult ----------------
+  VBL.onState((s) => { state = s; render(s); });
+  VBL.onEvent((ev) => {
+    if (ev.type === 'intro' && scene === 'main') intro();
+    if (ev.type === 'goal' && state) {
+      const home = ev.side !== 'away';
+      goal(home ? state.me.homeName : state.me.awayName, home ? state.me.homeColor : state.me.awayColor);
+    }
+    if (ev.type === 'toast') toast(ev.small || 'VBL', ev.text || '');
+  });
+
+  // Intro beim Laden der Hauptszene (abschaltbar mit ?intro=0)
+  if (scene === 'main' && params.get('intro') !== '0') setTimeout(intro, 400);
+
+  // Tastenkürzel (in OBS über „Interagieren“): I = Intro, G = Tor Heim, H = Tor Gast
+  window.addEventListener('keydown', (e) => {
+    if (!state) return;
+    if (e.key === 'i') intro();
+    if (e.key === 'g') goal(state.me.homeName, state.me.homeColor);
+    if (e.key === 'h') goal(state.me.awayName, state.me.awayColor);
+  });
+
+  // Vorschau im normalen Browser: ?demo=1 spielt alles nacheinander ab
+  if (params.get('demo') === '1') {
+    document.body.style.background = 'linear-gradient(135deg,#1c3b1f,#0f2412)';
+    setTimeout(() => goal(state.me.homeName, state.me.homeColor), 6500);
+    setTimeout(() => toast('Tor für FCB', 'FCB  1 : 0  BVB'), 11500);
+  }
+})();
+</script>
+</body>
+</html>
