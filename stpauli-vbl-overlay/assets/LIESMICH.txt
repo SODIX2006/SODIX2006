@@ -1,0 +1,17 @@
+SOUNDS (optional)
+=================
+Lege hier eigene MP3-Dateien mit genau diesen Namen ab, dann spielt das Overlay sie automatisch ab:
+
+  tor.mp3          eigenes Tor / St. Pauli trifft in der VBL
+  gegentor.mp3     Gegentor (nur wenn "Gegentor gross zeigen" an ist)
+  sieg.mp3         Abpfiff mit Sieg
+  remis.mp3        Abpfiff mit Unentschieden
+  niederlage.mp3   Abpfiff mit Niederlage
+  intro.mp3        Intro "Die VBL ist zurueck"
+
+Fehlt eine Datei, bleibt es einfach still.
+Lautstaerke und An/Aus stellst du im Kiez-Steuerpult ein.
+
+ACHTUNG: Nutze nur Sounds, die du im Stream verwenden darfst (lizenzfreie Torhymnen,
+Stadion-Jubel aus freien Sound-Bibliotheken, eigene Aufnahmen). Bekannte Songs wie die
+Torhymne vom Millerntor koennen auf Twitch/YouTube zu Sperren (DMCA) fuehren.

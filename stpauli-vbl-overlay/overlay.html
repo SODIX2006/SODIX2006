@@ -1,0 +1,1059 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>St. Pauli VBL Overlay</title>
+<meta name="viewport" content="width=1920, height=1080">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brown: #5a3522;
+    --brown-2: #7a4a30;
+    --brown-dark: #2a170d;
+    --ink: #140b06;
+    --cream: #f4ece0;
+    --cream-2: #e2d4bf;
+    --red: #d0192e;
+    --muted: #b8a58e;
+    --glass: rgba(26, 14, 8, 0.86);
+    --line: rgba(244, 236, 224, 0.14);
+    --home: #6b4029;
+    --away: #7c8594;
+    --display: 'Bebas Neue', 'Impact', 'Arial Narrow', sans-serif;
+    --ui: 'Barlow Condensed', 'Arial Narrow', 'Segoe UI', sans-serif;
+    --marker: 'Permanent Marker', 'Comic Sans MS', cursive;
+    --stripes: repeating-linear-gradient(-45deg, var(--brown) 0 18px, var(--cream) 18px 36px);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    width: 1920px; height: 1080px; overflow: hidden;
+    background: transparent; color: var(--cream);
+    font-family: var(--ui);
+    -webkit-font-smoothing: antialiased;
+  }
+  .scene { position: absolute; inset: 0; display: none; }
+  body[data-scene="main"] #scene-main,
+  body[data-scene="watch"] #scene-watch,
+  body[data-scene="countdown"] #scene-stage,
+  body[data-scene="pause"] #scene-stage,
+  body[data-scene="end"] #scene-stage { display: block; }
+
+  /* ================= Bausteine ================= */
+  .hide { opacity: 0 !important; transform: translateY(-20px) scale(.97) !important; pointer-events: none; }
+  .panel {
+    background: var(--glass);
+    border: 1px solid var(--line);
+    box-shadow: 0 18px 40px rgba(0,0,0,.5);
+    transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1.2);
+  }
+  .grain::before {
+    content: ''; position: absolute; inset: 0; pointer-events: none; opacity: .09; z-index: 1;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .live-dot {
+    width: 11px; height: 11px; border-radius: 50%; flex: none;
+    background: var(--red); animation: pulse 1.6s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(208,25,46,.75); }
+    70% { box-shadow: 0 0 0 14px rgba(208,25,46,0); }
+    100% { box-shadow: 0 0 0 0 rgba(208,25,46,0); }
+  }
+  .shine { position: relative; overflow: hidden; }
+  .shine::after {
+    content: ''; position: absolute; top: 0; bottom: 0; left: -40%; width: 30%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.25), transparent);
+    transform: skewX(-20deg); animation: sweep 7s ease-in-out infinite;
+  }
+  @keyframes sweep { 0%, 72% { left: -40%; } 100% { left: 140%; } }
+
+  .enter { animation: enter .9s cubic-bezier(.2,.9,.2,1.1) both; }
+  .enter.d1 { animation-delay: .15s; } .enter.d2 { animation-delay: .3s; }
+  .enter.d3 { animation-delay: .45s; } .enter.d4 { animation-delay: .6s; }
+  .enter.d5 { animation-delay: .75s; } .enter.d6 { animation-delay: .9s; }
+  @keyframes enter {
+    from { opacity: 0; transform: translateY(-30px) scale(.94); filter: blur(6px); }
+    to { opacity: 1; transform: none; filter: none; }
+  }
+
+  /* Sticker-Look (Kiez-Aufkleber) */
+  .sticker {
+    display: inline-block; position: relative;
+    background: var(--cream); color: var(--brown-dark);
+    font-family: var(--marker); padding: 10px 26px 8px;
+    box-shadow: 4px 6px 0 rgba(0,0,0,.35);
+    transform: rotate(-4deg);
+  }
+  .sticker::before, .sticker::after {
+    content: ''; position: absolute; width: 70px; height: 22px; top: -11px;
+    background: rgba(226, 212, 191, .75); box-shadow: 0 1px 2px rgba(0,0,0,.2);
+  }
+  .sticker::before { left: -18px; transform: rotate(-28deg); }
+  .sticker::after { right: -18px; transform: rotate(24deg); }
+
+  .badge {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--display); font-size: 28px; letter-spacing: 2px;
+    padding: 6px 14px 3px; background: var(--brown); color: var(--cream); white-space: nowrap; flex: none;
+    border: 2px solid var(--cream);
+    clip-path: polygon(8px 0, 100% 0, calc(100% - 8px) 100%, 0 100%);
+  }
+  .badge .live-dot { background: var(--red); width: 10px; height: 10px; }
+
+  /* ================= Scoreboard ================= */
+  #scoreboard { position: absolute; left: 40px; top: 36px; transition: opacity .6s, transform .6s; }
+  .sb-main { display: flex; align-items: stretch; height: 74px; filter: drop-shadow(0 14px 24px rgba(0,0,0,.5)); }
+  .sb-tag {
+    width: 104px; display: grid; place-items: center; position: relative; overflow: hidden;
+    font-family: var(--display); font-size: 40px; letter-spacing: 2px;
+  }
+  .sb-tag.home { background: var(--home); clip-path: polygon(16px 0, 100% 0, 100% 100%, 0 100%); }
+  .sb-tag.away { background: var(--away); clip-path: polygon(0 0, 100% 0, calc(100% - 16px) 100%, 0 100%); }
+  .sb-tag.home::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 22px;
+    background: repeating-linear-gradient(-45deg, var(--cream) 0 6px, transparent 6px 12px); opacity: .9;
+  }
+  .sb-tag span { position: relative; padding-left: 10px; }
+  .sb-name {
+    min-width: 190px; padding: 0 22px; display: flex; align-items: center;
+    font-weight: 800; font-size: 30px; text-transform: uppercase; letter-spacing: 1px;
+    background: linear-gradient(180deg, #2c1a10, #170d07); white-space: nowrap;
+  }
+  .sb-name.home { justify-content: flex-end; }
+  .sb-score {
+    display: flex; align-items: center; gap: 14px; padding: 0 24px;
+    background: linear-gradient(180deg, var(--cream), var(--cream-2)); color: var(--brown-dark);
+    font-family: var(--display); font-size: 60px; line-height: 1;
+  }
+  .sb-score .sep { font-size: 40px; opacity: .4; }
+  .num { display: inline-block; min-width: 32px; text-align: center; }
+  .num.bump { animation: bump .9s cubic-bezier(.2,.9,.2,1.4); }
+  @keyframes bump {
+    0% { transform: scale(1); }
+    25% { transform: scale(1.8) rotate(-6deg); color: var(--red); }
+    100% { transform: scale(1); }
+  }
+  .sb-sub {
+    margin: 0 16px 0 22px; display: flex; justify-content: space-between; align-items: center; gap: 18px;
+    padding: 6px 18px; font-size: 19px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    background: var(--glass); border: 1px solid var(--line); border-top: 0;
+  }
+  .sb-sub .label { color: var(--muted); }
+  .record { display: flex; gap: 12px; }
+  .record .w b { color: #8fe3a2; } .record .d b { color: #f3cf6a; } .record .l b { color: #ff8a8a; }
+
+  /* ================= VBL-Kopf ================= */
+  #vbl-header {
+    position: absolute; right: 40px; top: 36px; width: 640px; height: 74px;
+    display: flex; align-items: center; gap: 18px; padding: 0 22px 0 18px; overflow: hidden;
+  }
+  #vbl-header::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--stripes); }
+  .vbl-titles { display: flex; flex-direction: column; line-height: 1; overflow: hidden; }
+  .vbl-titles .t { font-family: var(--display); font-size: 34px; letter-spacing: 2px; white-space: nowrap; }
+  .vbl-titles .s { font-size: 18px; color: var(--muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .clock { margin-left: auto; font-family: var(--display); font-size: 32px; color: var(--muted); letter-spacing: 1px; }
+
+  /* ================= Rahmen für Quellen ================= */
+  .frame { position: absolute; transition: opacity .6s ease, transform .6s cubic-bezier(.2,.9,.2,1.2); }
+  .frame .border {
+    position: absolute; inset: -6px; padding: 6px;
+    background: repeating-linear-gradient(-45deg, var(--brown) 0 14px, var(--cream) 14px 28px);
+    background-size: 40px 40px;
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    animation: tape 1.2s linear infinite;
+    filter: drop-shadow(0 10px 24px rgba(0,0,0,.6));
+  }
+  @keyframes tape { to { background-position: 40px 0; } }
+  .frame .tag {
+    position: absolute; left: 18px; bottom: -20px; padding: 4px 14px 2px; z-index: 2;
+    font-family: var(--display); font-size: 24px; letter-spacing: 2px;
+    background: var(--brown-dark); border: 2px solid var(--cream); display: flex; align-items: center; gap: 8px;
+  }
+  .frame .tag.light { background: var(--cream); color: var(--brown-dark); border-color: var(--brown); }
+  .frame .kiez { position: absolute; right: -16px; top: -26px; font-size: 22px; z-index: 2; transform: rotate(5deg); }
+  #pip { left: 1240px; top: 132px; width: 640px; height: 360px; }
+  #cam { left: 40px; top: 755px; width: 400px; height: 225px; }
+
+  /* ================= Konferenz ================= */
+  .vt { padding: 12px 0 8px; position: absolute; }
+  #vbl-table { right: 40px; top: 528px; width: 640px; }
+  .vt-head {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 0 20px 10px; font-family: var(--display); font-size: 26px; letter-spacing: 2px;
+    border-bottom: 1px solid var(--line);
+  }
+  .vt-head span:last-child { font-family: var(--ui); font-size: 17px; color: var(--muted); font-weight: 700; letter-spacing: 1px; }
+  .vt-row {
+    display: grid; grid-template-columns: 1fr 120px 1fr 92px; align-items: center;
+    height: 50px; padding: 0 20px; position: relative; overflow: hidden;
+    font-weight: 800; font-size: 27px; letter-spacing: 1px;
+    animation: rowIn .6s cubic-bezier(.2,.9,.2,1.1) both;
+  }
+  .vt-row + .vt-row { border-top: 1px solid rgba(244,236,224,.06); }
+  @keyframes rowIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+  .vt-row .h { text-align: right; padding-right: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vt-row .a { text-align: left; padding-left: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .vt-row .sc {
+    justify-self: center; font-family: var(--display); font-size: 32px; letter-spacing: 2px;
+    background: rgba(244,236,224,.09); padding: 2px 14px 0; min-width: 96px; text-align: center;
+  }
+  .vt-row .st {
+    justify-self: end; font-size: 16px; font-weight: 800; letter-spacing: 1px;
+    padding: 3px 10px; background: rgba(244,236,224,.08); color: var(--muted);
+  }
+  .vt-row .st.live { background: rgba(208,25,46,.22); color: #ff9aa5; }
+  .vt-row.focus { background: linear-gradient(90deg, rgba(122,74,48,.55), rgba(122,74,48,.15)); }
+  .vt-row.focus::after { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--stripes); }
+  .vt-row.focus .sc { background: var(--cream); color: var(--brown-dark); }
+  .vt-row.flash::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(244,236,224,.5), transparent);
+    animation: rowFlash 2.4s ease-out;
+  }
+  .vt-row.flash .sc { animation: scFlash 2.4s ease-out; }
+  @keyframes rowFlash { 0% { opacity: 0; transform: translateX(-100%); } 20% { opacity: 1; } 100% { opacity: 0; transform: translateX(100%); } }
+  @keyframes scFlash { 0%, 60% { background: var(--red); color: #fff; transform: scale(1.12); } 100% { transform: none; } }
+  .vt-lineup { padding: 10px 20px 2px; font-size: 18px; font-weight: 700; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; }
+  .vt-lineup b { color: var(--cream); }
+
+  /* ================= Ticker ================= */
+  .ticker {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 60px;
+    display: flex; align-items: stretch;
+    background: linear-gradient(180deg, #24140b, #120a05);
+    border-top: 3px solid var(--cream);
+  }
+  .tk-label {
+    flex: none; display: flex; align-items: center; gap: 12px; padding: 0 40px 0 40px; position: relative;
+    font-family: var(--display); font-size: 30px; letter-spacing: 3px; background: var(--brown);
+    clip-path: polygon(0 0, 100% 0, calc(100% - 26px) 100%, 0 100%);
+  }
+  .tk-label::after { content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 34px; background: var(--stripes); clip-path: polygon(26px 0, 100% 0, 8px 100%, 0 100%); }
+  .tk-track { flex: 1; overflow: hidden; position: relative; -webkit-mask: linear-gradient(90deg, transparent, #000 4%, #000 96%, transparent); }
+  .tk-move { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; white-space: nowrap; will-change: transform; }
+  .tk-item { display: inline-flex; align-items: center; gap: 14px; padding: 0 30px; font-size: 26px; font-weight: 700; letter-spacing: .5px; }
+  .tk-item .ball { color: var(--muted); font-size: 18px; }
+  .tk-item b { font-family: var(--display); font-size: 29px; letter-spacing: 1.5px; color: var(--cream); font-weight: 400; }
+  .tk-item b.fcsp { color: #fff; background: var(--brown); padding: 0 8px; }
+  .tk-social {
+    flex: none; display: flex; align-items: center; padding: 0 40px 0 30px;
+    font-family: var(--display); font-size: 29px; letter-spacing: 2px; color: var(--cream);
+    background: rgba(244,236,224,.07);
+  }
+
+  /* ================= Watchparty-Szene ================= */
+  #scene-watch .bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(900px 600px at 85% 20%, rgba(122,74,48,.55), transparent 70%),
+      linear-gradient(160deg, #24140b, #0f0804);
+    -webkit-mask: linear-gradient(#000 0 0), linear-gradient(#000 0 0);
+    -webkit-mask-size: 100% 100%, 1536px 864px;
+    -webkit-mask-position: 0 0, 32px 32px;
+    -webkit-mask-repeat: no-repeat;
+    -webkit-mask-composite: xor; mask-composite: exclude;
+  }
+  #scene-watch .bg .stripe-deco { position: absolute; right: -120px; bottom: 120px; width: 600px; height: 40px; background: var(--stripes); transform: rotate(-35deg); opacity: .25; }
+  #wvbl { left: 32px; top: 32px; width: 1536px; height: 864px; }
+  #wcam { left: 1600px; top: 32px; width: 288px; height: 162px; }
+  #wtable { left: 1600px; top: 222px; width: 288px; max-height: 674px; overflow: hidden; }
+  #wtable .vt-head { font-size: 24px; padding: 0 14px 8px; }
+  #wtable .vt-row { grid-template-columns: 1fr 78px 1fr; height: 48px; padding: 0 10px; font-size: 22px; }
+  #wtable .vt-row .st { display: none; }
+  #wtable .vt-row .sc { min-width: 70px; font-size: 26px; padding: 2px 6px 0; }
+  #wtable .vt-row .h { padding-right: 8px; } #wtable .vt-row .a { padding-left: 8px; }
+  #wtable .vt-lineup { padding: 8px 14px 2px; font-size: 16px; }
+  #wbar {
+    position: absolute; left: 32px; right: 32px; top: 916px; height: 84px;
+    display: flex; align-items: center; gap: 22px; padding: 0 24px; overflow: hidden;
+  }
+  #wbar::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--stripes); }
+  #wbar .focus-match { margin-left: auto; display: flex; align-items: center; gap: 16px; font-weight: 800; font-size: 30px; letter-spacing: 1px; }
+  #wbar .focus-match .fs { font-family: var(--display); font-size: 44px; background: var(--cream); color: var(--brown-dark); padding: 2px 16px 0; }
+  #wbar .focus-match .fst { font-size: 16px; padding: 3px 10px; background: rgba(208,25,46,.22); color: #ff9aa5; }
+  #wbar .clock { margin-left: 26px; padding-left: 26px; border-left: 1px solid var(--line); }
+
+  /* ================= Toast ================= */
+  .toast {
+    position: absolute; left: 40px; top: 180px; transform: translateX(-130%);
+    display: flex; align-items: stretch; height: 86px; z-index: 40;
+    transition: transform .7s cubic-bezier(.2,.9,.2,1.25);
+    filter: drop-shadow(0 18px 30px rgba(0,0,0,.55));
+  }
+  body[data-scene="watch"] .toast { left: 64px; top: 64px; }
+  .toast.show { transform: none; }
+  .toast .ic {
+    width: 100px; display: grid; place-items: center; background: var(--brown); position: relative; overflow: hidden;
+    font-family: var(--display); font-size: 30px; letter-spacing: 1px; line-height: .9; text-align: center;
+  }
+  .toast .ic::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 8px; background: var(--stripes); }
+  .toast .tx { background: var(--cream); color: var(--brown-dark); padding: 0 34px; display: flex; flex-direction: column; justify-content: center; min-width: 380px; }
+  .toast .tx small { font-size: 18px; font-weight: 800; letter-spacing: 2px; color: var(--red); text-transform: uppercase; }
+  .toast .tx strong { font-family: var(--display); font-size: 42px; letter-spacing: 2px; line-height: 1; font-weight: 400; }
+
+  /* ================= Große Animationen ================= */
+  #fx { position: absolute; inset: 0; pointer-events: none; z-index: 50; }
+  #confetti { position: absolute; inset: 0; z-index: 60; pointer-events: none; }
+
+  .cele { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .cele.run { display: block; }
+  .cele .flash { position: absolute; inset: 0; background: var(--cream); opacity: 0; animation: gFlash .55s ease-out; }
+  @keyframes gFlash { 0% { opacity: .9; } 100% { opacity: 0; } }
+  .cele .band {
+    position: absolute; left: -15%; right: -15%; top: 50%;
+    transform: rotate(-7deg) scaleX(0);
+    animation: band 4s cubic-bezier(.7,0,.2,1) forwards;
+  }
+  .cele .band.b1 { height: 120px; margin-top: -310px; background: var(--stripes); background-size: 51px 51px; animation-delay: .02s; }
+  .cele .band.b2 { height: 420px; margin-top: -210px; background: linear-gradient(90deg, var(--cc), color-mix(in srgb, var(--cc) 55%, #000)); box-shadow: 0 0 120px rgba(0,0,0,.6); animation-delay: .08s; }
+  .cele .band.b3 { height: 110px; margin-top: 250px; background: var(--stripes); background-size: 51px 51px; animation-delay: .14s; }
+  .cele .band.b2::after { content: ''; position: absolute; inset: 0; opacity: .12; background: repeating-linear-gradient(90deg, #fff 0 2px, transparent 2px 9px); }
+  @keyframes band {
+    0% { transform: rotate(-7deg) scaleX(0); transform-origin: left; }
+    13% { transform: rotate(-7deg) scaleX(1); transform-origin: left; }
+    80% { transform: rotate(-7deg) scaleX(1); transform-origin: right; }
+    100% { transform: rotate(-7deg) scaleX(0); transform-origin: right; }
+  }
+  .cele .stripes-move { animation: band 4s cubic-bezier(.7,0,.2,1) forwards, stripesMove 1s linear infinite; }
+  @keyframes stripesMove { to { background-position: 51px 0; } }
+  .cele .word {
+    position: absolute; left: 0; right: 0; top: 50%; transform: translateY(-58%) rotate(-7deg);
+    display: flex; justify-content: center; gap: 6px;
+    font-family: var(--display); font-size: 310px; line-height: 1; letter-spacing: 6px;
+    color: var(--cream); -webkit-text-stroke: 6px var(--brown-dark);
+    text-shadow: 12px 12px 0 var(--brown-dark);
+  }
+  .cele .word span { display: inline-block; opacity: 0; animation: letter 3.8s cubic-bezier(.2,.9,.2,1.3) forwards; }
+  @keyframes letter {
+    0% { opacity: 0; transform: translateY(170px) scale(.4) rotate(14deg); }
+    12% { opacity: 1; transform: translateY(-20px) scale(1.14) rotate(-3deg); }
+    18% { transform: none; }
+    80% { opacity: 1; transform: none; }
+    100% { opacity: 0; transform: translateX(300px) skewX(-20deg); }
+  }
+  .cele .sticker-wrap { position: absolute; left: 50%; top: 50%; transform: translate(190px, 150px) rotate(-7deg); }
+  .cele .sticker { font-size: 52px; opacity: 0; animation: stick 3.8s cubic-bezier(.2,.9,.2,1.5) forwards .55s; }
+  @keyframes stick {
+    0% { opacity: 0; transform: rotate(-30deg) scale(3); }
+    10% { opacity: 1; transform: rotate(-6deg) scale(1); }
+    75% { opacity: 1; transform: rotate(-6deg) scale(1); }
+    90%, 100% { opacity: 0; transform: rotate(-6deg) scale(.6); }
+  }
+  .cele .who {
+    position: absolute; left: 50%; top: 50%; transform: translate(-80%, 128px) rotate(-7deg);
+    font-family: var(--display); font-size: 56px; letter-spacing: 10px; color: var(--cream); white-space: nowrap;
+    background: var(--brown-dark); padding: 6px 28px 0; box-shadow: 6px 6px 0 rgba(0,0,0,.35);
+    opacity: 0; animation: who 3.8s ease forwards;
+  }
+  @keyframes who { 0%, 18% { opacity: 0; letter-spacing: 40px; } 30% { opacity: 1; letter-spacing: 10px; } 76% { opacity: 1; } 90%, 100% { opacity: 0; } }
+  .cele .ring {
+    position: absolute; left: 50%; top: 50%; width: 200px; height: 200px; margin: -100px 0 0 -100px;
+    border-radius: 50%; border: 16px solid var(--cream); opacity: 0; animation: ring 1.2s ease-out .1s;
+  }
+  .cele .ring.r2 { animation-delay: .32s; border-color: var(--brown-2); }
+  @keyframes ring { 0% { opacity: .9; transform: scale(.2); } 100% { opacity: 0; transform: scale(9); } }
+  .cele.sad .band.b1, .cele.sad .band.b3 { background: repeating-linear-gradient(-45deg, #3a3f47 0 18px, #8a919c 18px 36px); }
+  .cele.sad .word { color: #c9ced6; -webkit-text-stroke-color: #1d2026; text-shadow: 10px 10px 0 #1d2026; }
+  body.shake .scene { animation: shake .5s; }
+  @keyframes shake {
+    10%, 90% { transform: translate(-3px, 2px); } 20%, 80% { transform: translate(6px, -4px); }
+    30%, 50%, 70% { transform: translate(-10px, 6px); } 40%, 60% { transform: translate(10px, -6px); }
+  }
+
+  /* Intro „Die VBL ist zurück – Road to Hamburg“ */
+  .intro { position: absolute; inset: 0; display: none; overflow: hidden; }
+  .intro.run { display: block; }
+  .intro .slice {
+    position: absolute; left: 0; right: 0; height: 20%;
+    background: var(--brown-dark); transform: translateX(-101%);
+    animation: slice 5s cubic-bezier(.75,0,.2,1) forwards;
+  }
+  .intro .slice:nth-child(even) { background: #3a2215; transform: translateX(101%); animation-name: sliceR; }
+  .intro .slice:nth-child(1) { top: 0; } .intro .slice:nth-child(2) { top: 20%; animation-delay: .05s; }
+  .intro .slice:nth-child(3) { top: 40%; animation-delay: .1s; } .intro .slice:nth-child(4) { top: 60%; animation-delay: .15s; }
+  .intro .slice:nth-child(5) { top: 80%; animation-delay: .2s; }
+  @keyframes slice { 0% { transform: translateX(-101%); } 11%, 85% { transform: none; } 100% { transform: translateX(101%); } }
+  @keyframes sliceR { 0% { transform: translateX(101%); } 11%, 85% { transform: none; } 100% { transform: translateX(-101%); } }
+  .intro .sky { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; opacity: 0; animation: skyUp 5s ease forwards .3s; }
+  @keyframes skyUp { 0% { opacity: 0; transform: translateY(120px); } 18%, 80% { opacity: .9; transform: none; } 95%, 100% { opacity: 0; } }
+  .intro .tapeband {
+    position: absolute; left: -20%; right: -20%; height: 46px; background: var(--stripes); background-size: 51px 51px;
+    transform: rotate(-4deg) scaleX(0); animation: tapeIn 5s cubic-bezier(.7,0,.2,1) forwards, stripesMove 1s linear infinite;
+  }
+  .intro .tapeband.t1 { top: 170px; animation-delay: .35s, 0s; }
+  .intro .tapeband.t2 { bottom: 230px; transform: rotate(3deg) scaleX(0); animation-name: tapeIn2, stripesMove; animation-delay: .45s, 0s; }
+  @keyframes tapeIn { 0% { transform: rotate(-4deg) scaleX(0); } 14%, 82% { transform: rotate(-4deg) scaleX(1); } 96%, 100% { transform: rotate(-4deg) scaleX(0); } }
+  @keyframes tapeIn2 { 0% { transform: rotate(3deg) scaleX(0); } 14%, 82% { transform: rotate(3deg) scaleX(1); } 96%, 100% { transform: rotate(3deg) scaleX(0); } }
+  .intro .big {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    font-family: var(--display); line-height: .9; text-align: center;
+  }
+  .intro .l1 { font-size: 110px; letter-spacing: 30px; color: var(--muted); opacity: 0; animation: introL1 5s ease forwards .45s; }
+  .intro .l2 {
+    font-size: 280px; letter-spacing: 10px; color: var(--cream); opacity: 0;
+    -webkit-text-stroke: 5px var(--brown-dark); text-shadow: 14px 14px 0 var(--brown);
+    animation: introL2 5s cubic-bezier(.2,.9,.2,1.2) forwards .6s;
+  }
+  .intro .l3 { margin-top: 6px; font-size: 90px; letter-spacing: 16px; color: var(--cream); opacity: 0; animation: introL1 5s ease forwards .85s; }
+  .intro .stamp {
+    position: absolute; left: 50%; top: 50%; transform: translate(230px, -250px) rotate(12deg);
+    font-family: var(--marker); font-size: 46px; color: var(--red);
+    border: 6px solid var(--red); padding: 6px 20px; border-radius: 8px; opacity: 0;
+    animation: stamp 5s cubic-bezier(.2,.9,.2,1.4) forwards 1.25s; mix-blend-mode: screen;
+  }
+  @keyframes stamp { 0% { opacity: 0; transform: translate(230px, -250px) rotate(12deg) scale(3); } 8% { opacity: 1; transform: translate(230px, -250px) rotate(12deg) scale(1); } 70% { opacity: 1; } 82%, 100% { opacity: 0; } }
+  @keyframes introL1 { 0% { opacity: 0; letter-spacing: 80px; } 16% { opacity: 1; letter-spacing: 30px; } 78% { opacity: 1; } 88%, 100% { opacity: 0; } }
+  @keyframes introL2 { 0% { opacity: 0; transform: scale(2.4); filter: blur(20px); } 13% { opacity: 1; transform: none; filter: none; } 76% { opacity: 1; transform: scale(1.04); } 88%, 100% { opacity: 0; transform: scale(.8); filter: blur(10px); } }
+
+  /* ================= Bühne: Countdown / Pause / Ende ================= */
+  .stage { position: absolute; inset: 0; overflow: hidden; background: radial-gradient(1400px 800px at 50% 110%, #5a3522 0%, #24140b 50%, #0d0703 100%); }
+  .stage .glow { position: absolute; border-radius: 50%; filter: blur(110px); opacity: .5; animation: float 14s ease-in-out infinite alternate; }
+  .stage .g1 { width: 760px; height: 760px; left: -200px; top: -260px; background: #7a4a30; }
+  .stage .g2 { width: 520px; height: 520px; right: -100px; top: 80px; background: #d0192e; opacity: .18; animation-delay: -6s; }
+  @keyframes float { from { transform: translate(0, 0) scale(1); } to { transform: translate(120px, 80px) scale(1.2); } }
+  .stage .beam {
+    position: absolute; top: -20%; width: 280px; height: 140%;
+    background: linear-gradient(180deg, rgba(244,236,224,.16), transparent 70%);
+    filter: blur(22px); transform-origin: top center; animation: beam 8s ease-in-out infinite alternate;
+  }
+  .stage .bm1 { left: 14%; transform: rotate(20deg); } .stage .bm2 { right: 14%; transform: rotate(-20deg); animation-delay: -4s; }
+  @keyframes beam { from { opacity: .25; } to { opacity: .85; } }
+  .stage .sky { position: absolute; left: 0; right: 0; bottom: 0; height: 300px; }
+  .stage .water { position: absolute; left: 0; right: 0; bottom: 0; height: 70px; overflow: hidden; }
+  .stage .water svg { position: absolute; bottom: 0; width: 3840px; height: 70px; animation: wave 12s linear infinite; }
+  .stage .water svg.w2 { animation-duration: 18s; animation-direction: reverse; opacity: .6; bottom: 10px; }
+  @keyframes wave { to { transform: translateX(-1920px); } }
+  .stage .tape-top, .stage .tape-bot {
+    position: absolute; left: -5%; right: -5%; height: 34px; background: var(--stripes); background-size: 51px 51px;
+    animation: stripesMove 1.4s linear infinite; opacity: .9; box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  }
+  .stage .tape-top { top: 40px; transform: rotate(-1.5deg); }
+  .stage .tape-bot { display: none; }
+  .stage canvas { position: absolute; inset: 0; }
+
+  .cd-wrap { position: absolute; left: 0; right: 0; top: 96px; display: flex; flex-direction: column; align-items: center; text-align: center; z-index: 2; }
+  .cd-kicker { font-size: 32px; }
+  .cd-head {
+    margin-top: 18px; padding-top: 14px; font-family: var(--display); font-size: 150px; line-height: 1; letter-spacing: 6px;
+    color: var(--cream); text-shadow: 10px 10px 0 var(--brown), 0 0 60px rgba(244,236,224,.25);
+  }
+  .cd-sub { margin-top: 10px; font-size: 38px; font-weight: 700; letter-spacing: 6px; color: var(--muted); text-transform: uppercase; }
+  .cd-note { margin-top: 22px; font-size: 40px; transform: rotate(-3deg); }
+  .cd-timer { margin-top: 34px; display: flex; gap: 22px; }
+  .cd-box {
+    width: 190px; padding: 18px 0 12px; text-align: center; position: relative; overflow: hidden;
+    background: rgba(20,11,6,.7); border: 2px solid rgba(244,236,224,.2);
+    box-shadow: 8px 8px 0 rgba(0,0,0,.35);
+  }
+  .cd-box::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: var(--stripes); }
+  .cd-box .v { font-family: var(--display); font-size: 128px; line-height: .9; }
+  .cd-box .k { font-size: 20px; font-weight: 800; letter-spacing: 4px; color: var(--muted); }
+  .cd-box .v.tick { animation: tick .5s ease-out; }
+  @keyframes tick { from { transform: translateY(-14px); opacity: .3; } to { transform: none; opacity: 1; } }
+  .cd-colon { font-family: var(--display); font-size: 120px; line-height: 1.2; color: var(--cream-2); animation: blink 1s steps(1) infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+  .cd-done { margin-top: 34px; font-family: var(--display); font-size: 130px; letter-spacing: 8px; color: var(--cream); animation: donePulse 1.4s ease-in-out infinite; display: none; text-shadow: 8px 8px 0 var(--brown); }
+  @keyframes donePulse { 50% { transform: scale(1.06); } }
+
+  .road { position: absolute; left: 0; right: 0; top: 640px; display: flex; flex-direction: column; align-items: center; z-index: 2; }
+  .road-title { font-family: var(--display); font-size: 30px; letter-spacing: 8px; color: var(--muted); margin-bottom: 14px; }
+  .road-line { display: flex; align-items: flex-start; position: relative; }
+  .road-line::before { content: ''; position: absolute; left: 60px; right: 60px; top: 15px; height: 4px; background: rgba(244,236,224,.2); }
+  .rd { width: 190px; display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; animation: rowIn .7s cubic-bezier(.2,.9,.2,1.1) both; }
+  .rd .pt { width: 30px; height: 30px; border-radius: 50%; background: #2a170d; border: 4px solid rgba(244,236,224,.35); z-index: 1; }
+  .rd .dt { font-family: var(--display); font-size: 28px; letter-spacing: 1px; margin-top: 4px; }
+  .rd .tt { font-size: 20px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .rd .pl { font-size: 18px; font-weight: 600; color: var(--muted); opacity: .8; }
+  .rd.past .pt { background: var(--cream-2); border-color: var(--cream-2); }
+  .rd.past { opacity: .55; }
+  .rd.next .pt { background: var(--red); border-color: var(--cream); animation: pulse 1.6s infinite; }
+  .rd.next .tt { color: var(--cream); }
+  .rd.final .pt { width: 38px; height: 38px; margin-top: -4px; background: var(--brown); border-color: var(--cream); }
+  .rd.final .tt { color: var(--cream); }
+  .rd .now { position: absolute; top: -46px; font-family: var(--marker); font-size: 24px; color: var(--brown-dark); background: var(--cream); padding: 2px 12px; transform: rotate(-6deg); box-shadow: 3px 4px 0 rgba(0,0,0,.35); }
+
+  .cd-matches { position: absolute; left: 0; right: 0; top: 846px; display: flex; justify-content: center; gap: 16px; z-index: 2; }
+  .cd-match {
+    padding: 10px 20px; background: rgba(20,11,6,.78); border: 1px solid var(--line);
+    font-size: 26px; font-weight: 800; letter-spacing: 1px; display: flex; gap: 12px; align-items: center;
+    animation: rowIn .8s cubic-bezier(.2,.9,.2,1.1) both;
+  }
+  .cd-match em { font-style: normal; font-family: var(--display); font-size: 30px; color: var(--cream); background: var(--brown); padding: 0 10px; }
+  .stage-social { position: absolute; right: 50px; bottom: 90px; z-index: 3; font-size: 34px; transform: rotate(3deg); }
+  body[data-scene="pause"] .cd-timer, body[data-scene="end"] .cd-timer,
+  body[data-scene="pause"] .cd-done, body[data-scene="end"] .cd-done { display: none !important; }
+  body[data-scene="pause"] .cd-wrap, body[data-scene="end"] .cd-wrap { top: 180px; }
+</style>
+</head>
+<body data-scene="main">
+
+<!-- Skyline-Vorlage (Hafenkräne, Speicherstadt, Michel, Elbphilharmonie) -->
+<template id="skyline">
+  <svg viewBox="0 0 1920 300" preserveAspectRatio="xMidYMax slice" width="1920" height="300" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <linearGradient id="skyFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1a0e07"/><stop offset="1" stop-color="#0b0603"/></linearGradient>
+    </defs>
+    <g fill="url(#skyFill)">
+      <!-- Speicherstadt -->
+      <path d="M0 300V190h40l20-30 20 30h30v-20l25-35 25 35v20h40l18-28 18 28h36v-40l22-30 22 30v40h30l20-26 20 26h34v110z"/>
+      <rect x="0" y="230" width="460" height="70"/>
+      <!-- Michel -->
+      <path d="M600 300V170h22v-40h10V80h6l6-60 6 60h6v50h10v40h22v130z"/>
+      <rect x="560" y="210" width="140" height="90"/>
+      <!-- Häuserzeile -->
+      <path d="M460 300V220h40v-15h50v15h10v80zM700 300V200h60v-20h40v20h50v100z"/>
+      <!-- Elbphilharmonie -->
+      <path d="M940 300V170h360v130z"/>
+      <path d="M930 172c30-40 60-52 90-38 30-46 70-56 100-34 40-40 90-38 120 0 22-14 44-10 70 14v8H930z"/>
+      <rect x="1300" y="235" width="120" height="65"/>
+      <!-- Hafenkräne -->
+      <g stroke="#120a05" stroke-width="6" fill="none">
+        <path d="M1500 300V120M1540 300V120M1500 120h40M1490 120h-90M1540 120h170M1700 120v40M1500 180l40-60M1540 180l-40-60"/>
+        <path d="M1760 300V150M1795 300V150M1760 150h35M1750 150h-60M1795 150h125M1900 150v34"/>
+      </g>
+      <rect x="1420" y="250" width="500" height="50"/>
+    </g>
+    <!-- Fenster-Lichter -->
+    <g fill="#f3cf6a" opacity=".55">
+      <rect x="60" y="245" width="8" height="10"/><rect x="120" y="255" width="8" height="10"/><rect x="210" y="240" width="8" height="10"/>
+      <rect x="300" y="250" width="8" height="10"/><rect x="380" y="242" width="8" height="10"/><rect x="980" y="200" width="10" height="8"/>
+      <rect x="1040" y="220" width="10" height="8"/><rect x="1120" y="200" width="10" height="8"/><rect x="1200" y="230" width="10" height="8"/>
+      <rect x="1260" y="210" width="10" height="8"/><rect x="760" y="230" width="8" height="10"/><rect x="820" y="250" width="8" height="10"/>
+    </g>
+  </svg>
+</template>
+
+<!-- ================== LIVE: Zocken + VBL ================== -->
+<div class="scene" id="scene-main">
+  <div id="scoreboard" class="enter">
+    <div class="sb-main shine">
+      <div class="sb-tag home"><span id="sbHomeTag">FCSP</span></div>
+      <div class="sb-name home" id="sbHomeName">SODIX</div>
+      <div class="sb-score"><span class="num" id="sbHomeScore">0</span><span class="sep">:</span><span class="num" id="sbAwayScore">0</span></div>
+      <div class="sb-name away" id="sbAwayName">GEGNER</div>
+      <div class="sb-tag away"><span id="sbAwayTag">GEG</span></div>
+    </div>
+    <div class="sb-sub">
+      <span class="label" id="sbLabel">FC 26</span>
+      <span class="record" id="sbRecord"><span class="w">S <b id="rW">0</b></span><span class="d">U <b id="rD">0</b></span><span class="l">N <b id="rL">0</b></span></span>
+    </div>
+  </div>
+
+  <div id="vbl-header" class="panel enter d1">
+    <div class="badge"><span class="live-dot"></span>VBL LIVE</div>
+    <div class="vbl-titles"><span class="t" data-f="vblTitle">VIRTUAL BUNDESLIGA</span><span class="s" data-f="vblSub">Club Championship</span></div>
+    <div class="clock" data-f="clock">20:00</div>
+  </div>
+
+  <div id="pip" class="frame enter d2">
+    <div class="border"></div>
+    <div class="tag"><span class="live-dot"></span>VBL LIVESTREAM</div>
+    <div class="kiez sticker">Kiez-Konferenz</div>
+  </div>
+
+  <div id="vbl-table" class="vt panel enter d3">
+    <div class="vt-head"><span>KONFERENZ</span><span data-f="vtCount">1 SPIEL</span></div>
+    <div class="vt-rows"></div>
+    <div class="vt-lineup"></div>
+  </div>
+
+  <div id="cam" class="frame enter d4">
+    <div class="border"></div>
+    <div class="tag light" data-f="camTag">SODIX</div>
+  </div>
+
+  <div class="ticker enter d5" id="ticker">
+    <div class="tk-label"><span class="live-dot"></span>KIEZ-TICKER</div>
+    <div class="tk-track"><div class="tk-move"></div></div>
+    <div class="tk-social" data-f="social">@sodix2006</div>
+  </div>
+</div>
+
+<!-- ================== WATCHPARTY: VBL groß ================== -->
+<div class="scene" id="scene-watch">
+  <div class="bg grain"><div class="stripe-deco"></div></div>
+  <div id="wvbl" class="frame enter">
+    <div class="border"></div>
+    <div class="tag"><span class="live-dot"></span>VBL LIVESTREAM</div>
+  </div>
+  <div id="wcam" class="frame enter d1">
+    <div class="border"></div>
+    <div class="tag light" data-f="camTag">SODIX</div>
+  </div>
+  <div id="wtable" class="vt panel enter d2">
+    <div class="vt-head"><span>KONFERENZ</span><span data-f="vtCount">1 SPIEL</span></div>
+    <div class="vt-rows"></div>
+    <div class="vt-lineup"></div>
+  </div>
+  <div id="wbar" class="panel enter d3">
+    <div class="badge"><span class="live-dot"></span>WATCHPARTY</div>
+    <div class="vbl-titles"><span class="t" data-f="vblTitle">VIRTUAL BUNDESLIGA</span><span class="s" data-f="vblSub">Club Championship</span></div>
+    <div class="focus-match" id="wfocus"></div>
+    <div class="clock" data-f="clock">20:00</div>
+  </div>
+  <div class="ticker enter d4">
+    <div class="tk-label"><span class="live-dot"></span>KIEZ-TICKER</div>
+    <div class="tk-track"><div class="tk-move"></div></div>
+    <div class="tk-social" data-f="social">@sodix2006</div>
+  </div>
+</div>
+
+<!-- ================== BÜHNE: Countdown / Pause / Ende ================== -->
+<div class="scene" id="scene-stage">
+  <div class="stage grain">
+    <div class="glow g1"></div><div class="glow g2"></div>
+    <div class="beam bm1"></div><div class="beam bm2"></div>
+    <canvas class="sparks"></canvas>
+    <div class="sky" data-sky></div>
+    <div class="water">
+      <svg class="w2" viewBox="0 0 3840 70" preserveAspectRatio="none"><path fill="#3a2215" d="M0 30 Q 120 10 240 30 T 480 30 T 720 30 T 960 30 T 1200 30 T 1440 30 T 1680 30 T 1920 30 T 2160 30 T 2400 30 T 2640 30 T 2880 30 T 3120 30 T 3360 30 T 3600 30 T 3840 30 V70 H0z"/></svg>
+      <svg viewBox="0 0 3840 70" preserveAspectRatio="none"><path fill="#1c100a" d="M0 40 Q 160 20 320 40 T 640 40 T 960 40 T 1280 40 T 1600 40 T 1920 40 T 2240 40 T 2560 40 T 2880 40 T 3200 40 T 3520 40 T 3840 40 V70 H0z"/></svg>
+    </div>
+    <div class="tape-top"></div>
+  </div>
+  <div class="cd-wrap">
+    <div class="badge cd-kicker enter"><span class="live-dot"></span><span id="stKicker">VIRTUAL BUNDESLIGA · FC ST. PAULI SUPPORT</span></div>
+    <div class="cd-head enter d1" id="stHead">DIE VBL IST ZURÜCK</div>
+    <div class="cd-sub enter d2" id="stSub">Road to Hamburg</div>
+    <div class="cd-timer enter d3" id="cdTimer">
+      <div class="cd-box"><div class="v" id="cdH">00</div><div class="k">STUNDEN</div></div>
+      <div class="cd-colon">:</div>
+      <div class="cd-box"><div class="v" id="cdM">05</div><div class="k">MINUTEN</div></div>
+      <div class="cd-colon">:</div>
+      <div class="cd-box"><div class="v" id="cdS">00</div><div class="k">SEKUNDEN</div></div>
+    </div>
+    <div class="cd-done" id="cdDone">ANSTOSS!</div>
+  </div>
+  <div class="road" id="road"><div class="road-title">ROAD TO HAMBURG · SAISON 2026/27</div><div class="road-line" id="roadLine"></div></div>
+  <div class="cd-matches" id="stMatches"></div>
+  <div class="stage-social sticker" data-f="social">@sodix2006</div>
+</div>
+
+<!-- ================== EFFEKTE ================== -->
+<div class="toast" id="toast">
+  <div class="ic" id="toastIc">TOR<br>VBL</div>
+  <div class="tx"><small id="toastSmall">Tor in der VBL</small><strong id="toastText">FCSP 1 : 0 GEGNER</strong></div>
+</div>
+<div id="fx">
+  <div class="cele" id="cele">
+    <div class="flash"></div>
+    <div class="ring"></div><div class="ring r2"></div>
+    <div class="band b1 stripes-move"></div>
+    <div class="band b2"></div>
+    <div class="band b3 stripes-move"></div>
+    <div class="word" id="celeWord"></div>
+    <div class="who" id="celeWho">SODIX</div>
+    <div class="sticker-wrap"><div class="sticker" id="celeSticker">Der Kiez bebt!</div></div>
+  </div>
+  <div class="intro" id="intro">
+    <div class="slice"></div><div class="slice"></div><div class="slice"></div><div class="slice"></div><div class="slice"></div>
+    <div class="sky" data-sky></div>
+    <div class="tapeband t1"></div><div class="tapeband t2"></div>
+    <div class="big">
+      <div class="l1">DIE</div>
+      <div class="l2">VBL</div>
+      <div class="l3">IST ZURÜCK</div>
+    </div>
+    <div class="stamp">Road to Hamburg</div>
+  </div>
+</div>
+<canvas id="confetti" width="1920" height="1080"></canvas>
+
+<script src="shared.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const $$ = (sel) => document.querySelectorAll(sel);
+  const params = new URLSearchParams(location.search);
+  const scene = params.get('scene') || 'main';
+  document.body.dataset.scene = scene;
+  const sceneEl = document.querySelector(scene === 'main' || scene === 'watch' ? '#scene-' + scene : '#scene-stage');
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const restart = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+  const setF = (name, text) => $$(`[data-f="${name}"]`).forEach((el) => { el.textContent = text; });
+
+  // Skyline in Bühne und Intro einsetzen
+  $$('[data-sky]').forEach((el) => el.appendChild($('skyline').content.cloneNode(true)));
+
+  let prev = null;
+  let state = null;
+
+  const isFocus = (m, s) => {
+    const f = (s.vbl.focus || '').trim().toUpperCase();
+    return !!f && (String(m.home).toUpperCase() === f || String(m.away).toUpperCase() === f);
+  };
+
+  // ---------------- Sounds (optional, eigene Dateien in assets/) ----------------
+  function sfx(name) {
+    if (!state || !state.me.sounds) return;
+    try {
+      const a = new Audio('assets/' + name + '.mp3');
+      a.volume = Math.max(0, Math.min(1, Number(state.me.volume) || 0.8));
+      a.play().catch(() => {});
+    } catch (e) { /* keine Datei -> still */ }
+  }
+
+  // ---------------- Rendern ----------------
+  function render(s) {
+    const me = s.me;
+    const root = document.documentElement.style;
+    root.setProperty('--home', me.homeColor);
+    root.setProperty('--away', me.awayColor);
+    $('sbHomeTag').textContent = me.homeTag;
+    $('sbAwayTag').textContent = me.awayTag;
+    $('sbHomeName').textContent = me.homeName;
+    $('sbAwayName').textContent = me.awayName;
+    $('sbHomeScore').textContent = me.homeScore;
+    $('sbAwayScore').textContent = me.awayScore;
+    $('sbLabel').textContent = me.label;
+    $('rW').textContent = s.record.w; $('rD').textContent = s.record.d; $('rL').textContent = s.record.l;
+    setF('camTag', me.homeName);
+    setF('vblTitle', s.vbl.title);
+    setF('vblSub', s.vbl.subtitle);
+    setF('social', s.social);
+
+    const vis = { scoreboard: 'scoreboard', vblHeader: 'vbl-header', pip: 'pip', vblTable: 'vbl-table', cam: 'cam', ticker: 'ticker' };
+    for (const [k, id] of Object.entries(vis)) $(id).classList.toggle('hide', !s.show[k]);
+    $('wcam').classList.toggle('hide', !s.show.cam);
+    $('sbRecord').style.display = s.show.record ? '' : 'none';
+
+    renderTables(s);
+    renderTicker(s);
+    renderStage(s);
+
+    if (prev) {
+      const hUp = me.homeScore > prev.me.homeScore;
+      const aUp = me.awayScore > prev.me.awayScore;
+      if (hUp) {
+        bump('sbHomeScore');
+        if (me.goalAnim && scene === 'main') {
+          celebrate({ word: 'TOOOR!', sticker: pick(['Der Kiez bebt!', 'Braun-weiß!', 'Was ein Ding!', 'Ab in den Knick!']), who: me.homeName + '  ' + me.homeScore + ':' + me.awayScore, color: me.homeColor, sound: 'tor' });
+        }
+      }
+      if (aUp) {
+        bump('sbAwayScore');
+        if (scene === 'main') {
+          if (me.celebrateAway) celebrate({ word: 'GEGENTOR', sticker: 'Kopf hoch!', who: me.awayName, color: '#4a4f58', sad: true, sound: 'gegentor' });
+          else toast('Gegentor', me.homeName + '  ' + me.homeScore + ' : ' + me.awayScore + '  ' + me.awayName, 'AUA');
+        }
+      }
+      if (me.homeScore < prev.me.homeScore || me.awayScore < prev.me.awayScore) { bump('sbHomeScore'); bump('sbAwayScore'); }
+    }
+    prev = KIEZ.clone(s);
+  }
+
+  const pick = (a) => a[Math.floor(Math.random() * a.length)];
+  function bump(id) { restart($(id), 'bump'); }
+
+  // ---------------- Konferenz ----------------
+  let lastTableKey = '';
+  function renderTables(s) {
+    const ms = s.vbl.matches || [];
+    setF('vtCount', ms.length + (ms.length === 1 ? ' SPIEL' : ' SPIELE'));
+    const key = JSON.stringify([ms, s.vbl.focus, s.vbl.lineup]);
+    if (key === lastTableKey) return;
+    const oldById = {};
+    (prev?.vbl.matches || []).forEach((m) => { oldById[m.id] = m; });
+    const first = !lastTableKey;
+    lastTableKey = key;
+
+    $$('.vt-lineup').forEach((el) => {
+      el.style.display = s.vbl.lineup ? '' : 'none';
+      el.innerHTML = s.vbl.lineup ? `${esc(s.vbl.focus)} Lineup: <b>${esc(s.vbl.lineup)}</b>` : '';
+    });
+
+    $$('.vt-rows').forEach((rows) => {
+      const existing = {};
+      rows.querySelectorAll('.vt-row').forEach((r) => { existing[r.dataset.id] = r; });
+      const frag = document.createDocumentFragment();
+      ms.forEach((m, i) => {
+        let r = existing[m.id];
+        if (!r) {
+          r = document.createElement('div');
+          r.className = 'vt-row';
+          r.dataset.id = m.id;
+          r.style.animationDelay = first ? (0.9 + i * 0.08) + 's' : '0s';
+          r.innerHTML = '<span class="h"></span><span class="sc"></span><span class="a"></span><span class="st"></span>';
+        }
+        delete existing[m.id];
+        r.classList.toggle('focus', isFocus(m, s));
+        r.querySelector('.h').textContent = m.home;
+        r.querySelector('.a').textContent = m.away;
+        r.querySelector('.sc').textContent = m.hs + ' : ' + m.as;
+        const st = r.querySelector('.st');
+        st.textContent = m.status || '';
+        st.classList.toggle('live', /live|\d+'/i.test(m.status || ''));
+        frag.appendChild(r);
+        const o = oldById[m.id];
+        if (o && (m.hs > o.hs || m.as > o.as)) restart(r, 'flash');
+      });
+      Object.values(existing).forEach((r) => r.remove());
+      rows.appendChild(frag);
+    });
+
+    // Tore erkennen (einmal pro Update, nicht pro Tabelle)
+    ms.forEach((m) => {
+      const o = oldById[m.id];
+      if (!o || !(m.hs > o.hs || m.as > o.as)) return;
+      const scorer = m.hs > o.hs ? m.home : m.away;
+      const line = m.home + '  ' + m.hs + ' : ' + m.as + '  ' + m.away;
+      const f = (s.vbl.focus || '').toUpperCase();
+      if (f && String(scorer).toUpperCase() === f && scene !== 'countdown') {
+        celebrate({ word: 'TOOOR!', sticker: pick(['St. Pauli trifft!', 'Kiezkicker!', 'Braun-weiß!']), who: line, color: '#6b4029', sound: 'tor' });
+      } else if (f && isFocus(m, s)) {
+        toast('Gegentor für ' + f, line, 'AUA');
+      } else {
+        toast('Tor für ' + scorer, line, 'TOR<br>VBL');
+      }
+    });
+
+    // Fokus-Spiel in der Watchparty-Leiste
+    const fm = ms.find((m) => isFocus(m, s));
+    $('wfocus').innerHTML = fm
+      ? `<span>${esc(fm.home)}</span><span class="fs">${esc(fm.hs)} : ${esc(fm.as)}</span><span>${esc(fm.away)}</span>${fm.status ? `<span class="fst">${esc(fm.status)}</span>` : ''}`
+      : '';
+
+    const chips = ms.slice(0, 5).map((m, i) =>
+      `<div class="cd-match" style="animation-delay:${1 + i * .1}s">${esc(m.home)} <em>${esc(m.hs)}:${esc(m.as)}</em> ${esc(m.away)}</div>`).join('');
+    $('stMatches').innerHTML = chips;
+  }
+
+  // ---------------- Ticker ----------------
+  let tickerKey = '';
+  const tickers = [...$$('.tk-move')].map((el) => ({ el, x: 0, w: 0 }));
+  function renderTicker(s) {
+    const f = (s.vbl.focus || '').toUpperCase();
+    const results = (s.vbl.matches || []).map((m) =>
+      `<b class="${isFocus(m, s) ? 'fcsp' : ''}">${esc(m.home)} ${esc(m.hs)}:${esc(m.as)} ${esc(m.away)}</b>`).join('<span class="ball">●</span>');
+    const items = (s.ticker || []).filter(Boolean).map((t) => esc(t));
+    if (results) items.push(results);
+    const key = items.join('|') + f;
+    if (key === tickerKey) return;
+    tickerKey = key;
+    const one = items.map((t) => `<span class="tk-item"><span class="ball">⚽</span>${t}</span>`).join('');
+    tickers.forEach((t) => {
+      t.el.innerHTML = one + one; // doppelt für eine nahtlose Schleife
+      t.w = t.el.scrollWidth / 2;
+      if (t.x < -t.w) t.x = 0;
+    });
+  }
+  let lastT = performance.now();
+  function tickLoop(now) {
+    const dt = Math.min(64, now - lastT); lastT = now;
+    tickers.forEach((t) => {
+      if (!t.w) { t.w = t.el.scrollWidth / 2; return; }
+      t.x -= dt * 0.09;
+      if (t.x <= -t.w) t.x += t.w;
+      t.el.style.transform = `translateX(${t.x}px)`;
+    });
+    requestAnimationFrame(tickLoop);
+  }
+  requestAnimationFrame(tickLoop);
+
+  // ---------------- Uhr ----------------
+  const clock = () => setF('clock', new Date().toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' }));
+  clock(); setInterval(clock, 5000);
+
+  // ---------------- Bühne (Countdown / Pause / Ende) ----------------
+  let roadKey = '';
+  function renderStage(s) {
+    const txt = scene === 'pause' ? s.pause : scene === 'end' ? s.end : s.countdown;
+    $('stHead').textContent = txt.headline;
+    $('stSub').textContent = txt.sub;
+    $('cdDone').textContent = s.countdown.done;
+
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const key = JSON.stringify(s.season) + today.toDateString();
+    if (key === roadKey) return;
+    roadKey = key;
+    const evs = s.season || [];
+    const nextIdx = evs.findIndex((e) => new Date(e.d + 'T23:59:59') >= today);
+    $('roadLine').innerHTML = evs.map((e, i) => {
+      const d = new Date(e.d + 'T12:00:00');
+      const isToday = d.toDateString() === today.toDateString();
+      const cls = [i < nextIdx || nextIdx === -1 ? 'past' : '', i === nextIdx ? 'next' : '', /finale/i.test(e.t) ? 'final' : ''].join(' ');
+      const label = d.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit' });
+      return `<div class="rd ${cls}" style="animation-delay:${1.1 + i * .08}s">${i === nextIdx ? `<span class="now">${isToday ? 'HEUTE' : 'Als Nächstes'}</span>` : ''}<span class="pt"></span><span class="dt">${label}</span><span class="tt">${esc(e.t)}</span><span class="pl">${esc(e.p)}</span></div>`;
+    }).join('');
+  }
+
+  const pad = (n) => String(n).padStart(2, '0');
+  const lastCd = {};
+  function setCd(id, v) {
+    if (lastCd[id] === v) return;
+    lastCd[id] = v;
+    const el = $(id); el.textContent = v; restart(el, 'tick');
+  }
+  const startedAt = Date.now();
+  let cdWasDone = false;
+  function countdownLoop() {
+    if (!state || scene !== 'countdown') return;
+    let target = state.countdown.target ? new Date(state.countdown.target).getTime() : NaN;
+    if (isNaN(target)) target = startedAt + 5 * 60 * 1000; // ohne Zielzeit: 5 Minuten ab Laden
+    const left = Math.max(0, Math.round((target - Date.now()) / 1000));
+    const done = left === 0;
+    $('cdTimer').style.display = done ? 'none' : '';
+    $('cdDone').style.display = done ? 'block' : 'none';
+    if (done && !cdWasDone) confetti('#6b4029', 200);
+    cdWasDone = done;
+    setCd('cdH', pad(Math.floor(left / 3600)));
+    setCd('cdM', pad(Math.floor(left / 60) % 60));
+    setCd('cdS', pad(left % 60));
+  }
+  setInterval(countdownLoop, 250);
+
+  // ---------------- Toast ----------------
+  const toastQueue = [];
+  let toastBusy = false;
+  function toast(small, text, icon) {
+    if (scene !== 'main' && scene !== 'watch') return;
+    toastQueue.push([small, text, icon || 'TOR<br>VBL']);
+    if (!toastBusy) nextToast();
+  }
+  function nextToast() {
+    const t = toastQueue.shift();
+    if (!t) { toastBusy = false; return; }
+    toastBusy = true;
+    $('toastSmall').textContent = t[0];
+    $('toastText').textContent = t[1];
+    $('toastIc').innerHTML = t[2];
+    $('toast').classList.add('show');
+    setTimeout(() => { $('toast').classList.remove('show'); setTimeout(nextToast, 800); }, 4500);
+  }
+
+  // ---------------- Große Feier (Tor / Sieg / …) ----------------
+  let celeTimer = null;
+  function celebrate({ word, sticker, who, color, sad, sound }) {
+    if (scene !== 'main' && scene !== 'watch') return;
+    const c = $('cele');
+    c.style.setProperty('--cc', color || '#6b4029');
+    c.classList.toggle('sad', !!sad);
+    const size = word.length > 7 ? 230 : 310;
+    $('celeWord').style.fontSize = size + 'px';
+    $('celeWord').innerHTML = [...word].map((ch, i) => `<span style="animation-delay:${0.12 + i * 0.055}s">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`).join('');
+    $('celeWho').textContent = who || '';
+    $('celeSticker').textContent = sticker || '';
+    $('celeSticker').parentElement.style.display = sticker ? '' : 'none';
+    restart(c, 'run');
+    if (!sad) {
+      restart(document.body, 'shake');
+      confetti(color);
+    }
+    sfx(sound || 'tor');
+    clearTimeout(celeTimer);
+    celeTimer = setTimeout(() => { c.classList.remove('run'); document.body.classList.remove('shake'); }, 4300);
+  }
+
+  // ---------------- Intro ----------------
+  let introTimer = null;
+  function intro() {
+    const el = $('intro');
+    restart(el, 'run');
+    sfx('intro');
+    clearTimeout(introTimer);
+    introTimer = setTimeout(() => el.classList.remove('run'), 6400);
+    setTimeout(() => confetti('#6b4029', 160), 1000);
+  }
+
+  // ---------------- Konfetti (braun / weiß / rot) ----------------
+  const cv = $('confetti');
+  const cx = cv.getContext('2d');
+  let parts = [];
+  let confettiRunning = false;
+  function confetti(color, n = 280) {
+    const cols = [color || '#6b4029', '#f4ece0', '#f4ece0', '#d0192e', '#7a4a30'];
+    for (let i = 0; i < n; i++) {
+      const fromLeft = i % 2 === 0;
+      parts.push({
+        x: fromLeft ? -20 : 1940, y: 650 + Math.random() * 350,
+        vx: (fromLeft ? 1 : -1) * (8 + Math.random() * 17), vy: -(14 + Math.random() * 17),
+        w: 9 + Math.random() * 10, h: 5 + Math.random() * 8,
+        r: Math.random() * Math.PI, vr: (Math.random() - .5) * .4,
+        c: cols[i % cols.length], life: 0,
+      });
+    }
+    if (!confettiRunning) { confettiRunning = true; requestAnimationFrame(confettiLoop); }
+  }
+  function confettiLoop() {
+    cx.clearRect(0, 0, 1920, 1080);
+    parts = parts.filter((p) => p.y < 1140 && p.life < 420);
+    for (const p of parts) {
+      p.life++; p.vy += 0.42; p.vx *= 0.985; p.vy *= 0.99;
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r);
+      cx.scale(1, Math.cos(p.life * 0.18));
+      cx.fillStyle = p.c; cx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+      cx.restore();
+    }
+    if (parts.length) requestAnimationFrame(confettiLoop);
+    else { confettiRunning = false; cx.clearRect(0, 0, 1920, 1080); }
+  }
+
+  // ---------------- Lichtfunken über dem Hafen ----------------
+  const sparks = sceneEl.querySelector('canvas.sparks');
+  if (sparks) {
+    sparks.width = 1920; sparks.height = 1080;
+    const x = sparks.getContext('2d');
+    const dots = Array.from({ length: 90 }, () => ({
+      x: Math.random() * 1920, y: Math.random() * 1080, s: .5 + Math.random() * 2.2,
+      v: .2 + Math.random() * .7, a: Math.random() * Math.PI * 2,
+    }));
+    (function loop() {
+      x.clearRect(0, 0, 1920, 1080);
+      for (const d of dots) {
+        d.y -= d.v; d.a += .02; d.x += Math.sin(d.a) * .4;
+        if (d.y < -10) { d.y = 1090; d.x = Math.random() * 1920; }
+        x.beginPath(); x.arc(d.x, d.y, d.s, 0, Math.PI * 2);
+        x.fillStyle = `rgba(244,${200 + d.s * 15 | 0},${160 + d.s * 20 | 0},${.2 + d.s * .18})`;
+        x.fill();
+      }
+      requestAnimationFrame(loop);
+    })();
+  }
+
+  // ---------------- Verbindung zum Steuerpult ----------------
+  KIEZ.onState((s) => { state = s; render(s); });
+  KIEZ.onEvent((ev) => {
+    if (!state) return;
+    if (ev.type === 'intro' && (scene === 'main' || scene === 'watch')) intro();
+    if (ev.type === 'goal') {
+      const home = ev.side !== 'away';
+      celebrate({ word: 'TOOOR!', sticker: 'Der Kiez bebt!', who: home ? state.me.homeName : state.me.awayName, color: home ? state.me.homeColor : state.me.awayColor, sound: 'tor' });
+    }
+    if (ev.type === 'vblgoal') {
+      celebrate({ word: 'TOOOR!', sticker: 'St. Pauli trifft!', who: (state.vbl.focus || 'FCSP') + ' · VBL', color: '#6b4029', sound: 'tor' });
+    }
+    if (ev.type === 'result') {
+      if (ev.r === 'w') celebrate({ word: 'SIEG!', sticker: '3 Punkte für den Kiez!', who: ev.text, color: '#6b4029', sound: 'sieg' });
+      if (ev.r === 'd') celebrate({ word: 'REMIS', sticker: 'Punkt mitgenommen', who: ev.text, color: '#7a4a30', sound: 'remis' });
+      if (ev.r === 'l') celebrate({ word: 'NIEDERLAGE', sticker: 'Weiter geht’s!', who: ev.text, color: '#4a4f58', sad: true, sound: 'niederlage' });
+    }
+    if (ev.type === 'toast') toast(ev.small || 'Info', ev.text || '', ev.icon || 'KIEZ<br>INFO');
+  });
+
+  // Intro beim Laden der Live-Szene (abschaltbar mit ?intro=0)
+  if (scene === 'main' && params.get('intro') !== '0') setTimeout(intro, 400);
+
+  // Tastenkürzel (OBS → Rechtsklick → Interagieren): I Intro, G Tor, H Gegentor-Test, S Sieg
+  window.addEventListener('keydown', (e) => {
+    if (!state) return;
+    const me = state.me;
+    if (e.key === 'i') intro();
+    if (e.key === 'g') celebrate({ word: 'TOOOR!', sticker: 'Der Kiez bebt!', who: me.homeName, color: me.homeColor, sound: 'tor' });
+    if (e.key === 'h') celebrate({ word: 'GEGENTOR', sticker: 'Kopf hoch!', who: me.awayName, color: '#4a4f58', sad: true, sound: 'gegentor' });
+    if (e.key === 's') celebrate({ word: 'SIEG!', sticker: '3 Punkte für den Kiez!', who: me.homeName, color: me.homeColor, sound: 'sieg' });
+  });
+
+  // Vorschau im Browser: ?demo=1 (Rasen-Hintergrund + Animationen nacheinander)
+  if (params.get('demo') === '1') {
+    if (scene === 'main' || scene === 'watch') document.body.style.background = 'linear-gradient(135deg,#1c3b1f,#0f2412)';
+    setTimeout(() => celebrate({ word: 'TOOOR!', sticker: 'Der Kiez bebt!', who: 'SODIX  1:0', color: state.me.homeColor }), 7000);
+    setTimeout(() => toast('Tor für FCSP', 'FCSP  1 : 0  GEGNER'), 12500);
+  }
+})();
+</script>
+</body>
+</html>
