@@ -687,6 +687,8 @@
 <canvas id="confetti" width="1920" height="1080"></canvas>
 
 <script src="shared.js"></script>
+<script src="obsws.js"></script>
+<script src="obs-config.js"></script>
 <script>
 (() => {
   const $ = (id) => document.getElementById(id);
@@ -1043,8 +1045,10 @@
   }
 
   // ---------------- Verbindung zum Steuerpult ----------------
-  KIEZ.onState((s) => { state = s; render(s); });
-  KIEZ.onEvent((ev) => {
+  let onStateHook = null;
+  KIEZ.onState((s) => { state = s; render(s); if (onStateHook) onStateHook(); });
+  KIEZ.onEvent(handleEvent);
+  function handleEvent(ev) {
     if (!state) return;
     if (ev.type === 'intro' && (scene === 'main' || scene === 'watch')) intro();
     if (ev.type === 'goal') {
@@ -1060,7 +1064,82 @@
       if (ev.r === 'l') celebrate({ word: 'NIEDERLAGE', sticker: 'Weiter geht’s!', who: ev.text, color: '#4a4f58', sad: true, sound: 'niederlage' });
     }
     if (ev.type === 'toast') toast(ev.small || 'Info', ev.text || '', ev.icon || 'KIEZ<br>INFO');
-  });
+  }
+
+  // ---------------- Fernbedienung (remote.html) über den OBS-WebSocket ----------------
+  // Nur das Live-Overlay nimmt Befehle an, damit nichts doppelt gezählt wird.
+  // Zugangsdaten: aus dem Steuerpult (Notlösung) oder von SETUP.bat (obs-config.js)
+  const CONN_KEY = 'kiez-obs-conn';
+  const obsConn = () => {
+    try { const c = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); if (c && c.port) return c; } catch (e) { /* egal */ }
+    return window.KIEZ_OBS || null;
+  };
+  if (scene === 'main' && window.OBSWS && params.get('remote') !== '0') {
+    let link = null;
+    const sendState = () => { if (link && state) link.broadcast({ kiez: 'state', state }).catch(() => {}); };
+    const commit = (s) => { KIEZ.save(s); state = s; render(s); sendState(); };
+    const fire = (ev) => { KIEZ.emit(ev); handleEvent(ev); };
+    onStateHook = sendState; // Änderungen aus dem Dock an die Fernbedienung weitergeben
+
+    function apply(c) {
+      if (!state) return;
+      const s = KIEZ.clone(state);
+      const me = s.me;
+      const m = s.vbl.matches[c.i];
+      const d = Number(c.d) || 0;
+      switch (c.cmd) {
+        case 'hello': return sendState();
+        case 'score':
+          if (c.side !== 'home' && c.side !== 'away') return;
+          me[c.side + 'Score'] = Math.max(0, me[c.side + 'Score'] + d); return commit(s);
+        case 'record':
+          if (!(c.k in s.record)) return;
+          s.record[c.k] = Math.max(0, s.record[c.k] + d); return commit(s);
+        case 'reset0': me.homeScore = 0; me.awayScore = 0; return commit(s);
+        case 'end': {
+          const h = me.homeScore, a = me.awayScore;
+          const r = h > a ? 'w' : h < a ? 'l' : 'd';
+          fire({ type: 'result', r, text: `${me.homeName}  ${h}:${a}  ${me.awayName}` });
+          // erst nach der Animation zurücksetzen, damit das Ergebnis noch sichtbar ist
+          setTimeout(() => {
+            const n = KIEZ.clone(state);
+            n.record[r]++;
+            n.me.homeScore = 0; n.me.awayScore = 0;
+            n.me.label = n.me.label.replace(/(Spiel\s*)(\d+)/i, (_, p, x) => p + (Number(x) + 1));
+            commit(n);
+          }, 4300);
+          return;
+        }
+        case 'vbl':
+          if (!m || (c.side !== 'hs' && c.side !== 'as')) return;
+          m[c.side] = Math.max(0, m[c.side] + d); return commit(s);
+        case 'status': if (!m) return; m.status = String(c.status || ''); return commit(s);
+        case 'alllive': s.vbl.matches.forEach((x) => { x.status = 'LIVE'; }); return commit(s);
+        case 'toggle': if (!(c.k in s.show)) return; s.show[c.k] = !s.show[c.k]; return commit(s);
+        case 'intro': return fire({ type: 'intro' });
+        case 'testgoal': return fire({ type: 'goal', side: 'home' });
+        case 'testvbl': return fire({ type: 'vblgoal' });
+        case 'testwin': return fire({ type: 'result', r: 'w', text: me.homeName });
+        case 'toast': return fire({ type: 'toast', small: String(c.small || 'Info'), text: String(c.text || '') });
+      }
+    }
+
+    function connectObs() {
+      if (link) { link.close(); link = null; }
+      const c = obsConn();
+      if (!c) return;
+      link = OBSWS.connect({
+        host: 'localhost',
+        port: c.port,
+        password: c.password,
+        events: OBSWS.EVENTS.General,
+        onStatus: (st) => { if (st === 'connected') sendState(); },
+        onEvent: (type, data) => { if (type === 'CustomEvent' && data && data.kiez === 'cmd') apply(data); },
+      });
+    }
+    connectObs();
+    window.addEventListener('storage', (e) => { if (e.key === CONN_KEY) connectObs(); });
+  }
 
   // Intro beim Laden der Live-Szene (abschaltbar mit ?intro=0)
   if (scene === 'main' && params.get('intro') !== '0') setTimeout(intro, 400);

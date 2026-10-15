@@ -25,6 +25,17 @@ Diese Datei entsteht erst durch `SETUP.bat`.
 > **Konsole statt PC?** In Szene *2 LIVE* die Quelle `FC 26 - Capturekarte (Konsole)` einblenden (Auge-Symbol),
 > deine Capturekarte auswählen und `FC 26 - Spielaufnahme (PC)` ausblenden.
 
+## Fernbedienung – steuern per Button
+
+**`remote.html`** ist eine eigene Steuerseite mit großen Buttons für den normalen Browser: zweiter Bildschirm, Tablet oder, optional, das Handy.
+Damit steuerst du Tor, Gegentor, Abpfiff, VBL-Tore, Intro, Einblendungen, Ein-/Ausblenden und **schaltest die Szenen um**.
+
+- `SETUP.bat` schaltet dafür den in OBS eingebauten **WebSocket-Server** ein und trägt das Passwort automatisch ein (`obs-config.js`).
+  Außerdem legt es auf dem Desktop die Verknüpfung **„Kiez-Fernbedienung“** an.
+- OBS starten, Verknüpfung doppelklicken, oben rechts muss **● Verbunden** stehen.
+- Handy, Probleme und Meldungen: siehe `ANLEITUNG.html`, Abschnitt *Fernbedienung*.
+- `obs-config.js` enthält dein OBS-WebSocket-Passwort. Gib den Ordner nach dem Setup also nicht weiter.
+
 ## Discord
 
 ### OBS-Bild in Discord übertragen

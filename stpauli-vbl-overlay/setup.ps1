@@ -37,7 +37,56 @@ if (Test-Path $scenes) {
     Write-Host '      Szenensammlung -> Importieren -> obs\St-Pauli-VBL-Watchparty.json'
 }
 
-# 3) Steuerpult-Adresse fuer das Browser-Dock in die Zwischenablage
+# 3) OBS-WebSocket-Server fuer die Fernbedienung (remote.html) einschalten
+$port = 4455
+$pw = $null
+$obsDir = Join-Path $env:APPDATA 'obs-studio'
+$wsDir = Join-Path $obsDir 'plugin_config\obs-websocket'
+$wsFile = Join-Path $wsDir 'config.json'
+try {
+    if (Test-Path $obsDir) {
+        $cfg = $null
+        if (Test-Path $wsFile) { $cfg = [System.IO.File]::ReadAllText($wsFile, $utf8) | ConvertFrom-Json }
+        if (-not $cfg) { $cfg = New-Object PSObject }
+        if ($cfg.server_port) { $port = [int]$cfg.server_port }
+        $authOn = $true
+        if ($null -ne $cfg.auth_required -and -not $cfg.auth_required) { $authOn = $false }
+        if ($authOn) {
+            $pw = [string]$cfg.server_password
+            if (-not $pw) {
+                $chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'.ToCharArray()
+                $pw = -join (1..16 | ForEach-Object { $chars | Get-Random })
+            }
+        } else { $pw = '' }
+        $set = @{ server_enabled = $true; server_port = $port; auth_required = $authOn; server_password = $pw; first_load = $false }
+        foreach ($k in $set.Keys) { $cfg | Add-Member -NotePropertyName $k -NotePropertyValue $set[$k] -Force }
+        if (-not $cfg.alerts_enabled) { $cfg | Add-Member -NotePropertyName alerts_enabled -NotePropertyValue $false -Force }
+        New-Item -ItemType Directory -Force -Path $wsDir | Out-Null
+        [System.IO.File]::WriteAllText($wsFile, ($cfg | ConvertTo-Json), $utf8)
+        Write-Host "  [OK] OBS-WebSocket-Server eingeschaltet (Port $port)" -ForegroundColor Green
+    }
+} catch {
+    Write-Host '  [!] OBS-WebSocket konnte nicht automatisch eingerichtet werden.' -ForegroundColor Yellow
+    $pw = $null
+}
+if ($null -eq $pw) {
+    Write-Host '      In OBS: Werkzeuge -> WebSocket-Server-Einstellungen -> Server aktivieren -> Verbindungsinformationen anzeigen'
+    $pw = Read-Host '      Server-Passwort hier einfuegen (leer lassen = ohne Passwort)'
+}
+$cfgJs = "// Automatisch von SETUP.bat erstellt - Zugang zum OBS-WebSocket fuer die Fernbedienung.`r`nwindow.KIEZ_OBS = { port: $port, password: " + (ConvertTo-Json ([string]$pw)) + " };`r`n"
+[System.IO.File]::WriteAllText((Join-Path $dir 'obs-config.js'), $cfgJs, $utf8)
+Write-Host '  [OK] Fernbedienung verbunden (obs-config.js)' -ForegroundColor Green
+
+# 4) Desktop-Verknuepfung zur Fernbedienung
+try {
+    $lnk = Join-Path ([Environment]::GetFolderPath('Desktop')) 'Kiez-Fernbedienung.lnk'
+    $sc = (New-Object -ComObject WScript.Shell).CreateShortcut($lnk)
+    $sc.TargetPath = Join-Path $dir 'remote.html'
+    $sc.Save()
+    Write-Host '  [OK] Desktop-Verknuepfung "Kiez-Fernbedienung" erstellt' -ForegroundColor Green
+} catch { }
+
+# 5) Steuerpult-Adresse fuer das Browser-Dock in die Zwischenablage
 $dock = "$base/control.html"
 try { Set-Clipboard -Value $dock; $clip = ' (liegt in der Zwischenablage)' } catch { $clip = '' }
 
@@ -50,6 +99,9 @@ Write-Host '   3. Quelle "VBL Stream (Browserfenster)" -> Browserfenster mit dem
 Write-Host '      (Konsole statt PC? In Szene 2 die Capturekarte einblenden und die PC-Spielaufnahme ausblenden.)'
 Write-Host '   4. Discord "Im Voice": streamkit.discord.com/overlay -> Voice Widget -> Server + Sprachkanal waehlen'
 Write-Host '      -> URL kopieren -> in OBS bei "Discord Voice (StreamKit)" als URL eintragen'
+Write-Host ''
+Write-Host '  FERNBEDIENUNG:' -ForegroundColor Yellow
+Write-Host '   Desktop -> "Kiez-Fernbedienung" doppelklicken (OBS muss laufen). Grosse Buttons fuer Tor, Abpfiff, Szenen ...'
 Write-Host ''
 Write-Host '  IN DISCORD TEILEN:' -ForegroundColor Yellow
 Write-Host '   OBS: Rechtsklick ins Vorschaubild -> Fensterprojektor (Programm)'

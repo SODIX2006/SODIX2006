@@ -195,6 +195,16 @@
   </section>
 
   <section>
+    <h2>Fernbedienung (remote.html)</h2>
+    <p class="hint" style="margin-top:0">Wird von SETUP.bat automatisch eingerichtet. Nur ausfüllen, wenn die Fernbedienung „Overlay antwortet nicht“ meldet: Port und Passwort aus OBS → <i>Werkzeuge → WebSocket-Server-Einstellungen → Verbindungsinformationen anzeigen</i>.</p>
+    <div class="row">
+      <div style="flex:.5"><label>Port</label><input id="wsPort" placeholder="4455" inputmode="numeric"></div>
+      <div><label>Passwort</label><input id="wsPass" type="password" placeholder="automatisch"></div>
+    </div>
+    <div class="actions" style="margin-top:8px"><button id="wsSave" class="brown">Übernehmen</button><button id="wsClear">Automatisch</button></div>
+  </section>
+
+  <section>
     <h2>System</h2>
     <button id="reset" style="width:100%">Alles auf Standard zurücksetzen</button>
     <p class="hint">Tastenkürzel im Overlay (OBS → Rechtsklick auf die Quelle → Interagieren): <b>I</b> Intro, <b>G</b> Tor, <b>H</b> Gegentor, <b>S</b> Sieg.</p>
@@ -334,6 +344,23 @@
 
   $('reset').addEventListener('click', () => {
     if (confirm('Wirklich alles zurücksetzen?')) { s = KIEZ.reset(); fill(); }
+  });
+
+  // ---------- Fernbedienung: Notlösung für die OBS-WebSocket-Zugangsdaten ----------
+  const CONN_KEY = 'kiez-obs-conn';
+  try {
+    const c = JSON.parse(localStorage.getItem(CONN_KEY) || 'null');
+    if (c) { $('wsPort').value = c.port; $('wsPass').value = c.password; }
+  } catch (e) { /* egal */ }
+  $('wsSave').addEventListener('click', () => {
+    const c = { port: Number($('wsPort').value) || 4455, password: $('wsPass').value };
+    try { localStorage.setItem(CONN_KEY, JSON.stringify(c)); } catch (e) { /* egal */ }
+    $('saved').textContent = 'Fernbedienung: Zugang gespeichert';
+  });
+  $('wsClear').addEventListener('click', () => {
+    try { localStorage.removeItem(CONN_KEY); } catch (e) { /* egal */ }
+    $('wsPort').value = ''; $('wsPass').value = '';
+    $('saved').textContent = 'Fernbedienung: automatisch (SETUP.bat)';
   });
 
   // Änderungen aus anderen Fenstern übernehmen (z. B. zweites Steuerpult)

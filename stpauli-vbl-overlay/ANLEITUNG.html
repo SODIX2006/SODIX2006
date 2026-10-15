@@ -53,6 +53,7 @@
 <nav>
   <a href="#setup">Einrichten</a>
   <a href="#discord">Discord teilen</a>
+  <a href="#fernbedienung">Fernbedienung</a>
   <a href="#animationen">Animationen auslösen</a>
   <a href="#abend">Ablauf eines Abends</a>
   <a href="#sounds">Sounds</a>
@@ -83,9 +84,45 @@
   <div class="note">Ohne Nitro überträgt Discord mit 720p/30, mit Nitro bis 1080p/60. Die Tor- und Sieg-Sounds laufen über OBS, deine Freunde hören sie also mit. Den VBL-Ton holen sich deine Leute am besten direkt von der VBL auf Twitch.</div>
 </section>
 
+<section id="fernbedienung">
+  <h2>Fernbedienung – steuern per Button</h2>
+  <p>Mit <b>remote.html</b> steuerst du alles über große Buttons in deinem normalen Browser, z. B. auf dem zweiten Bildschirm, neben dem Spiel oder auf einem Tablet. Du brauchst das OBS-Dock dafür nicht offen zu haben.</p>
+  <ol class="steps">
+    <li><b>OBS starten</b> und die Szenensammlung <i>St. Pauli VBL Watchparty</i> laden.</li>
+    <li>Auf dem Desktop <b>„Kiez-Fernbedienung“</b> doppelklicken (die Verknüpfung legt SETUP.bat an). Alternativ <code>remote.html</code> im Ordner öffnen.</li>
+    <li>Oben rechts muss <b>● Verbunden</b> stehen. Fertig – jeder Button wirkt sofort im Bild.</li>
+  </ol>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Bereich</th><th>Buttons</th></tr></thead>
+    <tbody>
+      <tr><td>Szene</td><td>Alle 5 Szenen per Klick umschalten. Die aktive Szene ist hell markiert</td></tr>
+      <tr><td>Mein Match</td><td><span class="btn">⚽ TOR</span> <span class="btn">😬 GEGENTOR</span>, Korrektur mit „−“, <span class="btn yellow">🏁 ABPFIFF</span> (mit Rückfrage), <span class="btn">0 : 0</span>. Spielstand und Bilanz werden live angezeigt</td></tr>
+      <tr><td>Animationen</td><td>Intro, Tor-, St.-Pauli- und Sieg-Animation zum Testen (ohne den Spielstand zu ändern)</td></tr>
+      <tr><td>Schnell-Einblendungen</td><td>HALBZEIT, 2. HALBZEIT, FORZA!, NÄCHSTES SPIEL – oder eigener Text</td></tr>
+      <tr><td>VBL Konferenz</td><td><span class="btn">+</span> / „−“ für jedes Team, Status LIVE / HZ / ENDE, „Alle auf LIVE“. Trifft St. Pauli, kommt die große Feier</td></tr>
+      <tr><td>Einblenden</td><td>Scoreboard, Konferenz, Kamera, Im Voice, Ticker … einzeln an/aus</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <div class="note"><b>Wie das funktioniert:</b> Die Fernbedienung redet mit dem WebSocket-Server, der in OBS eingebaut ist. SETUP.bat schaltet ihn ein und trägt das Passwort automatisch ein. Paarungen anlegen und Namen ändern geht weiter im Kiez-Steuerpult (Dock). Beides kannst du parallel benutzen.</div>
+  <h3>Auf dem Handy (optional)</h3>
+  <ol>
+    <li>Am PC im Ordner eine Eingabeaufforderung öffnen und <code>python -m http.server 8765</code> starten (dafür muss Python installiert sein).</li>
+    <li>Handy ins selbe WLAN, im Handy-Browser <code>http://&lt;IP-deines-PCs&gt;:8765/remote.html</code> öffnen. Die IP zeigt <code>ipconfig</code> (IPv4-Adresse).</li>
+    <li>Fragt Windows nach der Firewall für OBS bzw. Python: <i>Private Netzwerke</i> erlauben.</li>
+  </ol>
+  <h3>Meldungen der Fernbedienung</h3>
+  <ul>
+    <li><b>Keine Verbindung zu OBS:</b> OBS läuft nicht oder der WebSocket-Server ist aus → in OBS <i>Werkzeuge → WebSocket-Server-Einstellungen → Server aktivieren</i>.</li>
+    <li><b>Passwort falsch:</b> In OBS <i>Werkzeuge → WebSocket-Server-Einstellungen → Verbindungsinformationen anzeigen</i>, das Passwort kopieren und in der Fernbedienung über ⚙ eintragen. Im Kiez-Steuerpult unter <i>Fernbedienung</i> dasselbe Passwort eintragen und <i>Übernehmen</i> drücken.</li>
+    <li><b>OBS verbunden, aber Overlay antwortet nicht:</b> Szenensammlung geladen? In OBS bei der Quelle <i>Overlay Live</i> → <i>Eigenschaften</i> → <i>Aktualisieren</i>. Hilft das nicht, wie bei „Passwort falsch“ das Passwort im Steuerpult eintragen.</li>
+  </ul>
+</section>
+
 <section id="animationen">
   <h2>Animationen auslösen – Spickzettel</h2>
-  <p>Alles bedienst du im <b>Kiez-Steuerpult</b> (das Dock in OBS). Die Animationen erscheinen sofort im Bild, also auch bei deinen Freunden im Discord.</p>
+  <p>Alles bedienst du im <b>Kiez-Steuerpult</b> (das Dock in OBS) <b>oder mit der Fernbedienung</b> (gleiche Buttons, größer). Die Animationen erscheinen sofort im Bild, also auch bei deinen Freunden im Discord.</p>
   <div class="table-wrap">
   <table>
     <thead><tr><th>Animation</th><th>So löst du sie aus</th><th>Was passiert</th><th>Sichtbar in</th></tr></thead>

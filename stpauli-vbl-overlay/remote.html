@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Kiez-Fernbedienung</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<style>
+  :root {
+    --bg: #140b06; --card: #22140c; --card-2: #2e1c11; --line: #45301f;
+    --text: #f4ece0; --muted: #b8a58e; --brown: #6b4029; --cream: #f4ece0;
+    --red: #d0192e; --green: #3fbf6a; --yellow: #e9b949;
+    --stripes: repeating-linear-gradient(-45deg, #6b4029 0 10px, #f4ece0 10px 20px);
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.35 'Segoe UI', system-ui, sans-serif; user-select: none; }
+  header {
+    position: sticky; top: 0; z-index: 5; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    background: #1c100a; border-bottom: 1px solid var(--line);
+  }
+  header::after { content: ''; position: absolute; left: 0; right: 0; bottom: -5px; height: 5px; background: var(--stripes); }
+  header h1 { margin: 0; font-size: 16px; letter-spacing: 2px; }
+  .conn { margin-left: auto; display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
+  .conn .dot { width: 12px; height: 12px; border-radius: 50%; background: #777; }
+  .conn.ok .dot { background: var(--green); box-shadow: 0 0 10px var(--green); }
+  .conn.warn .dot { background: var(--yellow); }
+  .conn.bad .dot { background: var(--red); }
+  header button { padding: 6px 10px; }
+  main { max-width: 1100px; margin: 0 auto; padding: 18px 12px 40px; display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+  section h2 { margin: 0 0 12px; font-size: 12px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
+  .wide { grid-column: 1 / -1; }
+  button {
+    background: var(--card-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 10px; font: inherit; font-weight: 700; cursor: pointer; touch-action: manipulation;
+    transition: transform .08s, background .15s, filter .15s;
+  }
+  button:hover { filter: brightness(1.15); }
+  button:active { transform: scale(.95); }
+  button:disabled { opacity: .4; pointer-events: none; }
+  button.brown { background: var(--brown); border-color: var(--cream); }
+  button.cream { background: var(--cream); color: #2a170d; border-color: var(--cream); }
+  button.yellow { background: var(--yellow); color: #1c1400; border-color: var(--yellow); }
+  button.red { background: var(--red); border-color: var(--red); }
+  button.huge { font-size: 26px; padding: 26px 10px; letter-spacing: 1px; }
+  button.big { font-size: 18px; padding: 18px 10px; }
+  button.flash { animation: flash .6s; }
+  @keyframes flash { 0% { box-shadow: 0 0 0 0 rgba(244,236,224,.8); } 100% { box-shadow: 0 0 0 18px rgba(244,236,224,0); } }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  .scenes { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; }
+  .scenes button.active { background: var(--cream); color: #2a170d; border-color: var(--cream); }
+  .scenes button.active::before { content: '● '; color: var(--red); }
+  .scoreline { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; margin-bottom: 12px; text-align: center; }
+  .scoreline .nm { font-weight: 800; font-size: 18px; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .scoreline .sc { font-size: 54px; font-weight: 900; line-height: 1; background: var(--cream); color: #2a170d; padding: 4px 16px; border-radius: 6px; }
+  .label { text-align: center; color: var(--muted); font-size: 13px; margin: -6px 0 10px; }
+  .rec { display: flex; justify-content: center; gap: 18px; margin-top: 10px; font-weight: 700; }
+  .rec b { font-size: 20px; } .rec .w b { color: var(--green); } .rec .d b { color: var(--yellow); } .rec .l b { color: #ff8a8a; }
+  .match { border-top: 1px solid var(--line); padding: 10px 0; }
+  .match:first-child { border-top: 0; padding-top: 0; }
+  .match.focus { background: linear-gradient(90deg, rgba(107,64,41,.45), transparent); border-radius: 6px; padding-left: 8px; padding-right: 8px; }
+  .mrow { display: grid; grid-template-columns: 44px 1fr auto 1fr 44px; gap: 8px; align-items: center; }
+  .mrow .t { font-weight: 800; font-size: 17px; text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mrow .s { font-size: 28px; font-weight: 900; min-width: 86px; text-align: center; }
+  .mrow button { padding: 12px 0; font-size: 20px; }
+  .mminus { display: flex; justify-content: space-between; margin-top: 6px; gap: 6px; }
+  .mminus button { padding: 6px 10px; font-size: 13px; }
+  .mminus .sts { display: flex; gap: 6px; }
+  .mstatus { text-align: center; font-size: 12px; color: var(--muted); margin-top: 4px; letter-spacing: 1px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  input { width: 100%; background: var(--card-2); color: var(--text); border: 1px solid var(--line); border-radius: 8px; padding: 12px; font: inherit; user-select: text; }
+  label.f { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 4px; }
+  .row { display: flex; gap: 8px; }
+  .row > * { flex: 1; min-width: 0; }
+  .toggles { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+  .toggles button.on { background: var(--brown); border-color: var(--cream); }
+  .toggles button.on::before { content: '✓ '; }
+  #settings { display: none; }
+  #settings.open { display: block; }
+  .banner { grid-column: 1 / -1; background: #3a2215; border: 1px solid var(--yellow); border-radius: 10px; padding: 12px 14px; display: none; }
+  .banner.show { display: block; }
+  .log { font-size: 13px; color: var(--muted); min-height: 18px; text-align: center; margin-top: 8px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🤎 KIEZ-FERNBEDIENUNG</h1>
+  <div class="conn" id="conn"><span class="dot"></span><span id="connText">Verbinde …</span></div>
+  <button id="gear" title="Verbindung">⚙</button>
+</header>
+<main>
+  <div class="banner" id="banner"></div>
+
+  <section class="wide" id="settings">
+    <h2>Verbindung zu OBS</h2>
+    <p class="muted">Wird von <b>SETUP.bat</b> automatisch eingetragen. Nur ändern, wenn du in OBS unter <i>Werkzeuge → WebSocket-Server-Einstellungen</i> etwas anderes eingestellt hast.</p>
+    <div class="row">
+      <div><label class="f">PC / Host</label><input id="cHost" placeholder="localhost"></div>
+      <div style="flex:.5"><label class="f">Port</label><input id="cPort" placeholder="4455" inputmode="numeric"></div>
+      <div><label class="f">Passwort</label><input id="cPass" type="password" placeholder="aus OBS"></div>
+    </div>
+    <div class="row" style="margin-top:10px"><button class="brown" id="cSave">Speichern & verbinden</button></div>
+  </section>
+
+  <section class="wide">
+    <h2>Szene</h2>
+    <div class="scenes" id="scenes"><span class="muted">Szenen werden geladen …</span></div>
+  </section>
+
+  <section>
+    <h2>Mein Match (FC 26)</h2>
+    <div class="scoreline"><div class="nm" id="hName">ICH</div><div class="sc" id="score">0 : 0</div><div class="nm" id="aName">GEGNER</div></div>
+    <div class="label" id="mLabel"></div>
+    <div class="grid2">
+      <button class="brown huge" data-cmd='{"cmd":"score","side":"home","d":1}'>⚽ TOR</button>
+      <button class="huge" data-cmd='{"cmd":"score","side":"away","d":1}'>😬 GEGENTOR</button>
+      <button data-cmd='{"cmd":"score","side":"home","d":-1}'>− eigenes Tor</button>
+      <button data-cmd='{"cmd":"score","side":"away","d":-1}'>− Gegentor</button>
+    </div>
+    <div class="grid2" style="margin-top:10px">
+      <button class="yellow big" data-cmd='{"cmd":"end"}' data-confirm="Abpfiff? Ergebnis wird in die Bilanz gezählt.">🏁 ABPFIFF</button>
+      <button class="big" data-cmd='{"cmd":"reset0"}'>0 : 0</button>
+    </div>
+    <div class="rec"><span class="w">S <b id="rW">0</b></span><span class="d">U <b id="rD">0</b></span><span class="l">N <b id="rL">0</b></span></div>
+  </section>
+
+  <section>
+    <h2>Animationen</h2>
+    <div class="grid2">
+      <button class="brown big" data-cmd='{"cmd":"intro"}'>▶ INTRO</button>
+      <button class="cream big" data-cmd='{"cmd":"testgoal"}'>⚽ Tor-Animation</button>
+      <button class="big" data-cmd='{"cmd":"testvbl"}'>🤎 St. Pauli trifft</button>
+      <button class="big" data-cmd='{"cmd":"testwin"}'>🏆 Sieg-Animation</button>
+    </div>
+    <p class="muted">Diese vier spielen nur die Animation ab, Spielstand und Bilanz bleiben gleich.</p>
+    <h2 style="margin-top:16px">Schnell-Einblendungen</h2>
+    <div class="grid2">
+      <button data-cmd='{"cmd":"toast","small":"Halbzeit","text":"Kurz durchatmen"}'>⏸ HALBZEIT</button>
+      <button data-cmd='{"cmd":"toast","small":"Gleich geht’s weiter","text":"Zweite Halbzeit"}'>▶ 2. HALBZEIT</button>
+      <button data-cmd='{"cmd":"toast","small":"Braun-weiß","text":"Forza St. Pauli!"}'>🤎 FORZA!</button>
+      <button data-cmd='{"cmd":"toast","small":"Nächstes Spiel","text":"Gleich geht’s los"}'>⏭ NÄCHSTES SPIEL</button>
+    </div>
+    <label class="f">Eigene Einblendung</label>
+    <div class="row"><input id="tSmall" placeholder="Überschrift"><input id="tText" placeholder="Text" style="flex:2"></div>
+    <div class="row" style="margin-top:8px"><button class="brown" id="tSend">Einblenden</button></div>
+  </section>
+
+  <section class="wide">
+    <h2>VBL Konferenz</h2>
+    <div id="matches"><span class="muted">Warte auf das Overlay …</span></div>
+    <div class="row" style="margin-top:10px"><button data-cmd='{"cmd":"alllive"}'>Alle auf LIVE</button></div>
+    <p class="muted">Paarungen anlegen und umbenennen geht im Kiez-Steuerpult (OBS-Dock). Hier zählst du nur die Tore und setzt den Status.</p>
+  </section>
+
+  <section class="wide">
+    <h2>Einblenden / Ausblenden</h2>
+    <div class="toggles" id="toggles"></div>
+    <div class="log" id="log"></div>
+  </section>
+</main>
+
+<script src="obsws.js"></script>
+<script src="obs-config.js"></script>
+<script>
+(() => {
+  const $ = (id) => document.getElementById(id);
+  const CONN_KEY = 'kiez-remote-conn';
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  // ---------- Verbindungsdaten: gespeichert > obs-config.js > Standard ----------
+  function loadConn() {
+    let saved = null;
+    try { saved = JSON.parse(localStorage.getItem(CONN_KEY) || 'null'); } catch (e) { /* egal */ }
+    const cfg = window.KIEZ_OBS || {};
+    return {
+      host: saved?.host || location.hostname || 'localhost',
+      port: saved?.port || cfg.port || 4455,
+      password: saved?.password ?? cfg.password ?? '',
+    };
+  }
+  let conn = loadConn();
+  $('cHost').value = conn.host; $('cPort').value = conn.port; $('cPass').value = conn.password;
+  $('gear').addEventListener('click', () => $('settings').classList.toggle('open'));
+  $('cSave').addEventListener('click', () => {
+    conn = { host: $('cHost').value.trim() || 'localhost', port: Number($('cPort').value) || 4455, password: $('cPass').value };
+    try { localStorage.setItem(CONN_KEY, JSON.stringify(conn)); } catch (e) { /* egal */ }
+    start();
+  });
+
+  // ---------- Status ----------
+  let state = null;
+  let stateTimer = null;
+  function setConn(cls, text) { $('conn').className = 'conn ' + cls; $('connText').textContent = text; }
+  function banner(html) { $('banner').innerHTML = html || ''; $('banner').classList.toggle('show', !!html); }
+  function log(t) { $('log').textContent = t; }
+
+  // ---------- Verbindung ----------
+  let link = null;
+  function start() {
+    if (link) link.close();
+    state = null;
+    link = OBSWS.connect({
+      host: conn.host, port: conn.port, password: conn.password,
+      events: OBSWS.EVENTS.General | OBSWS.EVENTS.Scenes,
+      onStatus: (st, info) => {
+        if (st === 'connected') {
+          setConn('warn', 'OBS verbunden – warte auf Overlay');
+          banner('');
+          loadScenes();
+          send({ cmd: 'hello' }, true);
+          clearTimeout(stateTimer);
+          stateTimer = setTimeout(() => {
+            if (!state) banner('<b>OBS ist verbunden, aber das Overlay antwortet nicht.</b> Ist die Szenensammlung <i>St. Pauli VBL Watchparty</i> geladen? Dann in OBS bei der Quelle <i>Overlay Live</i> auf <i>Eigenschaften → Aktualisieren</i> klicken. Wurde <b>SETUP.bat</b> ausgeführt?');
+          }, 3000);
+        } else if (st === 'auth') {
+          setConn('bad', 'Passwort falsch');
+          banner('<b>Das OBS-WebSocket-Passwort stimmt nicht.</b> Über ⚙ das Passwort aus OBS eintragen (Werkzeuge → WebSocket-Server-Einstellungen → Verbindungsinformationen anzeigen) oder SETUP.bat erneut ausführen.');
+          $('settings').classList.add('open');
+        } else if (st === 'connecting') {
+          setConn('', 'Verbinde …');
+        } else {
+          setConn('bad', 'Keine Verbindung');
+          banner('<b>Keine Verbindung zu OBS.</b> Läuft OBS? Ist unter <i>Werkzeuge → WebSocket-Server-Einstellungen</i> der Server aktiviert (Port ' + esc(conn.port) + ')? Es wird automatisch weiter versucht.');
+        }
+      },
+      onEvent: (type, data) => {
+        if (type === 'CustomEvent' && data && data.kiez === 'state') {
+          state = data.state;
+          clearTimeout(stateTimer);
+          setConn('ok', 'Verbunden');
+          banner('');
+          render();
+        }
+        if (type === 'CurrentProgramSceneChanged') markScene(data.sceneName);
+        if (type === 'SceneListChanged' || type === 'SceneNameChanged') loadScenes();
+      },
+    });
+  }
+
+  function send(cmd, quiet) {
+    if (!link) return;
+    link.broadcast(Object.assign({ kiez: 'cmd' }, cmd)).then(() => { if (!quiet) log('✓ gesendet'); }).catch((e) => log('✕ ' + e.message));
+  }
+
+  // ---------- Buttons ----------
+  document.querySelectorAll('[data-cmd]').forEach((b) => b.addEventListener('click', () => {
+    if (b.dataset.confirm && !confirm(b.dataset.confirm)) return;
+    send(JSON.parse(b.dataset.cmd));
+    b.classList.remove('flash'); void b.offsetWidth; b.classList.add('flash');
+  }));
+  $('tSend').addEventListener('click', () => {
+    send({ cmd: 'toast', small: $('tSmall').value || 'Info', text: $('tText').value });
+  });
+
+  // ---------- Szenen ----------
+  let currentScene = '';
+  async function loadScenes() {
+    try {
+      const r = await link.request('GetSceneList');
+      const names = (r.scenes || []).map((x) => x.sceneName).sort((a, b) => a.localeCompare(b, 'de', { numeric: true }));
+      currentScene = r.currentProgramSceneName || '';
+      $('scenes').innerHTML = '';
+      names.forEach((n) => {
+        const b = document.createElement('button');
+        b.className = 'big';
+        b.textContent = n;
+        b.dataset.scene = n;
+        b.addEventListener('click', () => link.request('SetCurrentProgramScene', { sceneName: n }).catch((e) => log('✕ ' + e.message)));
+        $('scenes').appendChild(b);
+      });
+      markScene(currentScene);
+    } catch (e) { /* noch nicht verbunden */ }
+  }
+  function markScene(n) {
+    currentScene = n;
+    document.querySelectorAll('#scenes button').forEach((b) => b.classList.toggle('active', b.dataset.scene === n));
+  }
+
+  // ---------- Anzeige ----------
+  const TOGGLES = [['scoreboard', 'Scoreboard'], ['record', 'Bilanz'], ['vblHeader', 'VBL-Kopf'], ['pip', 'VBL-Stream-Rahmen'], ['vblTable', 'Konferenz'], ['cam', 'Kamera'], ['voice', 'Im Voice'], ['ticker', 'Ticker']];
+  function render() {
+    if (!state) return;
+    const me = state.me;
+    $('hName').textContent = me.homeName;
+    $('aName').textContent = me.awayName;
+    $('score').textContent = me.homeScore + ' : ' + me.awayScore;
+    $('mLabel').textContent = me.label;
+    $('rW').textContent = state.record.w; $('rD').textContent = state.record.d; $('rL').textContent = state.record.l;
+
+    const focus = String(state.vbl.focus || '').toUpperCase();
+    const ms = state.vbl.matches || [];
+    $('matches').innerHTML = ms.length ? ms.map((m, i) => {
+      const f = focus && [m.home, m.away].some((t) => String(t).toUpperCase() === focus);
+      return `<div class="match${f ? ' focus' : ''}">
+        <div class="mrow">
+          <button class="brown" data-m='{"cmd":"vbl","i":${i},"side":"hs","d":1}'>+</button>
+          <div class="t">${esc(m.home)}</div>
+          <div class="s">${esc(m.hs)} : ${esc(m.as)}</div>
+          <div class="t">${esc(m.away)}</div>
+          <button class="brown" data-m='{"cmd":"vbl","i":${i},"side":"as","d":1}'>+</button>
+        </div>
+        <div class="mstatus">${esc(m.status || '')}</div>
+        <div class="mminus">
+          <button data-m='{"cmd":"vbl","i":${i},"side":"hs","d":-1}'>−</button>
+          <div class="sts">
+            <button data-m='{"cmd":"status","i":${i},"status":"LIVE"}'>LIVE</button>
+            <button data-m='{"cmd":"status","i":${i},"status":"HZ"}'>HZ</button>
+            <button data-m='{"cmd":"status","i":${i},"status":"ENDE"}'>ENDE</button>
+          </div>
+          <button data-m='{"cmd":"vbl","i":${i},"side":"as","d":-1}'>−</button>
+        </div>
+      </div>`;
+    }).join('') : '<span class="muted">Noch keine Spiele angelegt – im Kiez-Steuerpult hinzufügen.</span>';
+    $('matches').querySelectorAll('[data-m]').forEach((b) => b.addEventListener('click', () => send(JSON.parse(b.dataset.m))));
+
+    $('toggles').innerHTML = TOGGLES.map(([k, n]) => `<button class="${state.show[k] ? 'on' : ''}" data-k="${k}">${n}</button>`).join('');
+    $('toggles').querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => send({ cmd: 'toggle', k: b.dataset.k })));
+  }
+
+  if (!window.OBSWS) { banner('Die Datei <b>obsws.js</b> fehlt. Bitte den kompletten Ordner verwenden.'); return; }
+  start();
+})();
+</script>
+</body>
+</html>
