@@ -1,5 +1,5 @@
 /*
- * St. Pauli VBL Watchparty – gemeinsamer Zustand zwischen Steuerpult und Overlays.
+ * St. Pauli VBL Discord-Watchparty – gemeinsamer Zustand zwischen Steuerpult und Overlays.
  *
  * Synchronisiert über drei Wege, damit es in OBS (Browser-Dock + Browser-Quellen)
  * und im normalen Browser zuverlässig klappt:
@@ -8,7 +8,7 @@
  *   3. Polling           (Fallback alle 700 ms)
  */
 const KIEZ = (() => {
-  const KEY = 'stpauli-vbl-state-v1';
+  const KEY = 'stpauli-vbl-state-v2';
   const EVT = 'stpauli-vbl-event-v1';
 
   const DEFAULT = {
@@ -50,24 +50,28 @@ const KIEZ = (() => {
     ],
     ticker: [
       'Die Virtual Bundesliga ist zurück – Road to Hamburg!',
+      'Willkommen zur Kiez-Watchparty im Discord',
       'Braun-weiß im Herzen: Wir supporten den FC St. Pauli eSports',
       'Finale am 12. & 13. März 2027 in Hamburg',
-      'Nebenbei zocke ich selbst FC 26 – ab in den Chat!',
+      'Nebenbei zocke ich selbst FC 26 – Tipps und Sprüche gern in den Voice!',
     ],
-    social: '@sodix2006',
+    social: 'DISCORD · KIEZ-WATCHPARTY',
+    discord: {
+      channel: 'VBL-Watchparty',
+    },
     countdown: {
       target: '',
       headline: 'DIE VBL IST ZURÜCK',
-      sub: 'Road to Hamburg · Der Stream startet gleich',
+      sub: 'Road to Hamburg · Die Watchparty startet gleich',
       done: 'ANSTOSS!',
     },
     pause: {
       headline: 'KURZE PAUSE',
-      sub: 'Bin gleich zurück – die VBL läuft weiter',
+      sub: 'Bin gleich zurück – quatscht ruhig weiter',
     },
     end: {
-      headline: 'DANKE FÜRS ZUSCHAUEN',
-      sub: 'Bis zum nächsten Spieltag – Forza St. Pauli!',
+      headline: 'DANKE FÜRS DABEISEIN',
+      sub: 'Bis zum nächsten Spieltag im Discord – Forza St. Pauli!',
     },
     show: {
       scoreboard: true,
@@ -76,6 +80,7 @@ const KIEZ = (() => {
       pip: true,
       vblTable: true,
       cam: true,
+      voice: true,
       ticker: true,
     },
   };

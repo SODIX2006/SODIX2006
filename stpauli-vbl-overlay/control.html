@@ -76,7 +76,7 @@
 </style>
 </head>
 <body>
-<header><span class="dot"></span><h1>KIEZ-STEUERPULT · VBL</h1><span class="saved" id="saved">bereit</span></header>
+<header><span class="dot"></span><h1>KIEZ-STEUERPULT · DISCORD-WATCHPARTY</h1><span class="saved" id="saved">bereit</span></header>
 <main>
 
   <section>
@@ -153,7 +153,7 @@
   </section>
 
   <section>
-    <h2>Einblenden (Live-Szene)</h2>
+    <h2>Einblenden</h2>
     <div class="toggles">
       <label><input type="checkbox" data-k="show.scoreboard"> Scoreboard</label>
       <label><input type="checkbox" data-k="show.record"> Bilanz</label>
@@ -161,6 +161,7 @@
       <label><input type="checkbox" data-k="show.pip"> VBL-Stream-Rahmen</label>
       <label><input type="checkbox" data-k="show.vblTable"> Konferenz</label>
       <label><input type="checkbox" data-k="show.cam"> Kamera-Rahmen</label>
+      <label><input type="checkbox" data-k="show.voice"> Discord „Im Voice“</label>
       <label><input type="checkbox" data-k="show.ticker"> Ticker</label>
     </div>
     <h2 style="margin-top:16px">Sound</h2>
@@ -174,8 +175,10 @@
     <h2>Ticker</h2>
     <label>Eine Meldung pro Zeile (VBL-Ergebnisse laufen automatisch mit)</label>
     <textarea id="ticker"></textarea>
-    <label>Social / Kanal</label>
+    <label>Text rechts im Ticker</label>
     <input data-k="social">
+    <label>Discord-Sprachkanal (Anzeige über „Im Voice“)</label>
+    <input data-k="discord.channel">
   </section>
 
   <section>

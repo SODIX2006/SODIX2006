@@ -2,7 +2,7 @@
 <html lang="de">
 <head>
 <meta charset="utf-8">
-<title>St. Pauli VBL Overlay</title>
+<title>St. Pauli VBL Discord-Watchparty</title>
 <meta name="viewport" content="width=1920, height=1080">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Barlow+Condensed:wght@500;600;700;800&family=Permanent+Marker&display=swap" rel="stylesheet">
@@ -176,6 +176,23 @@
   #pip { left: 1240px; top: 132px; width: 640px; height: 360px; }
   #cam { left: 40px; top: 755px; width: 400px; height: 225px; }
 
+  /* ================= Discord „Im Voice“ ================= */
+  .voice { position: absolute; overflow: hidden; }
+  .voice::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 6px; background: var(--stripes); }
+  .voice .vh {
+    display: flex; align-items: center; gap: 10px; height: 46px; padding: 0 14px 0 20px;
+    font-family: var(--display); font-size: 26px; letter-spacing: 2px; border-bottom: 1px solid var(--line);
+  }
+  .voice .vh .hs { width: 24px; height: 24px; color: var(--cream); flex: none; }
+  .voice .vh > span:first-of-type { white-space: nowrap; flex: none; }
+  #wvoice .vh { font-size: 23px; gap: 8px; padding: 0 10px 0 16px; }
+  #wvoice .vch { font-size: 14px; }
+  .voice .vch { margin-left: auto; font-family: var(--ui); font-size: 16px; font-weight: 700; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .voice .vbody { position: absolute; left: 12px; right: 12px; top: 48px; bottom: 12px; }
+  #voice { left: 40px; top: 196px; width: 300px; height: 420px; }
+  #wvoice { left: 1600px; top: 222px; width: 288px; height: 340px; }
+  .tk-social .hs { width: 26px; height: 26px; margin-right: 12px; flex: none; }
+
   /* ================= Konferenz ================= */
   .vt { padding: 12px 0 8px; position: absolute; }
   #vbl-table { right: 40px; top: 528px; width: 640px; }
@@ -258,7 +275,7 @@
   #scene-watch .bg .stripe-deco { position: absolute; right: -120px; bottom: 120px; width: 600px; height: 40px; background: var(--stripes); transform: rotate(-35deg); opacity: .25; }
   #wvbl { left: 32px; top: 32px; width: 1536px; height: 864px; }
   #wcam { left: 1600px; top: 32px; width: 288px; height: 162px; }
-  #wtable { left: 1600px; top: 222px; width: 288px; max-height: 674px; overflow: hidden; }
+  #wtable { left: 1600px; top: 590px; width: 288px; max-height: 306px; overflow: hidden; }
   #wtable .vt-head { font-size: 24px; padding: 0 14px 8px; }
   #wtable .vt-row { grid-template-columns: 1fr 78px 1fr; height: 48px; padding: 0 10px; font-size: 22px; }
   #wtable .vt-row .st { display: none; }
@@ -559,6 +576,10 @@
     <div class="vt-lineup"></div>
   </div>
 
+  <div id="voice" class="voice panel enter d4">
+    <div class="vh"><svg class="hs" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h2v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h2a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/></svg><span>IM VOICE</span><span class="vch" data-f="voiceChannel">#VBL-Watchparty</span></div>
+    <div class="vbody"></div>
+  </div>
   <div id="cam" class="frame enter d4">
     <div class="border"></div>
     <div class="tag light" data-f="camTag">SODIX</div>
@@ -567,7 +588,7 @@
   <div class="ticker enter d5" id="ticker">
     <div class="tk-label"><span class="live-dot"></span>KIEZ-TICKER</div>
     <div class="tk-track"><div class="tk-move"></div></div>
-    <div class="tk-social" data-f="social">@sodix2006</div>
+    <div class="tk-social"><svg class="hs" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h2v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h2a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/></svg><span data-f="social">DISCORD</span></div>
   </div>
 </div>
 
@@ -582,13 +603,17 @@
     <div class="border"></div>
     <div class="tag light" data-f="camTag">SODIX</div>
   </div>
+  <div id="wvoice" class="voice panel enter d2">
+    <div class="vh"><svg class="hs" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h2v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h2a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/></svg><span>IM VOICE</span><span class="vch" data-f="voiceChannel">#VBL-Watchparty</span></div>
+    <div class="vbody"></div>
+  </div>
   <div id="wtable" class="vt panel enter d2">
     <div class="vt-head"><span>KONFERENZ</span><span data-f="vtCount">1 SPIEL</span></div>
     <div class="vt-rows"></div>
     <div class="vt-lineup"></div>
   </div>
   <div id="wbar" class="panel enter d3">
-    <div class="badge"><span class="live-dot"></span>WATCHPARTY</div>
+    <div class="badge"><span class="live-dot"></span>DISCORD-WATCHPARTY</div>
     <div class="vbl-titles"><span class="t" data-f="vblTitle">VIRTUAL BUNDESLIGA</span><span class="s" data-f="vblSub">Club Championship</span></div>
     <div class="focus-match" id="wfocus"></div>
     <div class="clock" data-f="clock">20:00</div>
@@ -596,7 +621,7 @@
   <div class="ticker enter d4">
     <div class="tk-label"><span class="live-dot"></span>KIEZ-TICKER</div>
     <div class="tk-track"><div class="tk-move"></div></div>
-    <div class="tk-social" data-f="social">@sodix2006</div>
+    <div class="tk-social"><svg class="hs" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 3a9 9 0 0 0-9 9v6a3 3 0 0 0 3 3h2v-8H5v-1a7 7 0 0 1 14 0v1h-3v8h2a3 3 0 0 0 3-3v-6a9 9 0 0 0-9-9z"/></svg><span data-f="social">DISCORD</span></div>
   </div>
 </div>
 
@@ -614,7 +639,7 @@
     <div class="tape-top"></div>
   </div>
   <div class="cd-wrap">
-    <div class="badge cd-kicker enter"><span class="live-dot"></span><span id="stKicker">VIRTUAL BUNDESLIGA · FC ST. PAULI SUPPORT</span></div>
+    <div class="badge cd-kicker enter"><span class="live-dot"></span><span id="stKicker">VIRTUAL BUNDESLIGA · DISCORD-WATCHPARTY</span></div>
     <div class="cd-head enter d1" id="stHead">DIE VBL IST ZURÜCK</div>
     <div class="cd-sub enter d2" id="stSub">Road to Hamburg</div>
     <div class="cd-timer enter d3" id="cdTimer">
@@ -628,7 +653,7 @@
   </div>
   <div class="road" id="road"><div class="road-title">ROAD TO HAMBURG · SAISON 2026/27</div><div class="road-line" id="roadLine"></div></div>
   <div class="cd-matches" id="stMatches"></div>
-  <div class="stage-social sticker" data-f="social">@sodix2006</div>
+  <div class="stage-social sticker" data-f="social">DISCORD</div>
 </div>
 
 <!-- ================== EFFEKTE ================== -->
@@ -718,6 +743,9 @@
     const vis = { scoreboard: 'scoreboard', vblHeader: 'vbl-header', pip: 'pip', vblTable: 'vbl-table', cam: 'cam', ticker: 'ticker' };
     for (const [k, id] of Object.entries(vis)) $(id).classList.toggle('hide', !s.show[k]);
     $('wcam').classList.toggle('hide', !s.show.cam);
+    $('voice').classList.toggle('hide', !s.show.voice);
+    $('wvoice').classList.toggle('hide', !s.show.voice);
+    setF('voiceChannel', '#' + String(s.discord.channel || '').replace(/^#/, ''));
     $('sbRecord').style.display = s.show.record ? '' : 'none';
 
     renderTables(s);

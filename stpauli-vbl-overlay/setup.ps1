@@ -7,7 +7,7 @@ $base = ([System.Uri]$dir).AbsoluteUri.TrimEnd('/')   # z. B. file:///C:/Users/N
 $utf8 = New-Object System.Text.UTF8Encoding $false
 
 Write-Host ''
-Write-Host '  ===  ST. PAULI VBL WATCHPARTY - OBS SETUP  ===' -ForegroundColor Yellow
+Write-Host '  ===  ST. PAULI VBL DISCORD-WATCHPARTY - OBS SETUP  ===' -ForegroundColor Yellow
 Write-Host ''
 
 if (Get-Process -Name obs64, obs32, obs -ErrorAction SilentlyContinue) {
@@ -42,12 +42,20 @@ $dock = "$base/control.html"
 try { Set-Clipboard -Value $dock; $clip = ' (liegt in der Zwischenablage)' } catch { $clip = '' }
 
 Write-Host ''
-Write-Host '  NOCH 3 KLEINIGKEITEN IN OBS:' -ForegroundColor Yellow
+Write-Host '  NOCH 4 KLEINIGKEITEN IN OBS:' -ForegroundColor Yellow
 Write-Host '   1. Docks -> Benutzerdefinierte Browser-Docks -> Name: Kiez-Steuerpult'
 Write-Host "      URL: $dock$clip"
 Write-Host '   2. Quelle "Webcam" doppelklicken -> deine Kamera auswaehlen'
 Write-Host '   3. Quelle "VBL Stream (Browserfenster)" -> Browserfenster mit dem VBL-Twitch-Stream auswaehlen'
 Write-Host '      (Konsole statt PC? In Szene 2 die Capturekarte einblenden und die PC-Spielaufnahme ausblenden.)'
+Write-Host '   4. Discord "Im Voice": streamkit.discord.com/overlay -> Voice Widget -> Server + Sprachkanal waehlen'
+Write-Host '      -> URL kopieren -> in OBS bei "Discord Voice (StreamKit)" als URL eintragen'
 Write-Host ''
+Write-Host '  IN DISCORD TEILEN:' -ForegroundColor Yellow
+Write-Host '   OBS: Rechtsklick ins Vorschaubild -> Fensterprojektor (Programm)'
+Write-Host '   Discord: Sprachkanal -> Bildschirm teilen -> Fenster "Fensterprojektor (Programm)" waehlen'
+Write-Host ''
+Write-Host '  Die komplette Anleitung (inkl. Animationen) oeffnet sich jetzt im Browser.'
 Write-Host '  Forza St. Pauli!' -ForegroundColor Yellow
+try { Start-Process (Join-Path $dir 'ANLEITUNG.html') } catch { }
 Write-Host ''

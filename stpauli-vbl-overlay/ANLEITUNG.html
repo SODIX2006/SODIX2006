@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<title>Anleitung – St. Pauli VBL Discord-Watchparty</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    --bg: #140b06; --card: #22140c; --card-2: #2e1c11; --line: #45301f;
+    --text: #f4ece0; --muted: #c2b29c; --brown: #6b4029; --cream: #f4ece0; --red: #d0192e;
+    --stripes: repeating-linear-gradient(-45deg, #6b4029 0 12px, #f4ece0 12px 24px);
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.55 'Segoe UI', system-ui, sans-serif; }
+  .tape { height: 14px; background: var(--stripes); }
+  header { padding: 40px 20px 28px; text-align: center; }
+  header h1 { margin: 0; font-size: clamp(28px, 5vw, 46px); letter-spacing: 2px; text-transform: uppercase; }
+  header p { margin: 8px 0 0; color: var(--muted); }
+  nav { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 0 16px 24px; }
+  nav a { color: var(--text); text-decoration: none; background: var(--card-2); border: 1px solid var(--line); padding: 6px 12px; border-radius: 6px; font-weight: 600; font-size: 14px; }
+  nav a:hover { background: var(--brown); }
+  main { max-width: 980px; margin: 0 auto; padding: 0 16px 60px; }
+  section { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 22px 22px 18px; margin-bottom: 18px; }
+  h2 { margin: 0 0 14px; font-size: 22px; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 10px; }
+  h2::before { content: ''; width: 8px; height: 26px; background: var(--stripes); flex: none; }
+  h3 { margin: 20px 0 8px; font-size: 17px; }
+  ol, ul { padding-left: 22px; margin: 8px 0; }
+  li { margin: 5px 0; }
+  code, kbd { background: var(--card-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; font-size: 14px; }
+  kbd { font-weight: 700; }
+  .btn { display: inline-block; background: var(--brown); border: 1px solid var(--cream); border-radius: 5px; padding: 0 8px; font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .btn.cream { background: var(--cream); color: #2a170d; }
+  .btn.yellow { background: #e9b949; color: #1c1400; border-color: #e9b949; }
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 640px; }
+  th, td { text-align: left; vertical-align: top; padding: 10px 10px; border-bottom: 1px solid var(--line); }
+  th { font-size: 13px; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); }
+  td:first-child { font-weight: 700; white-space: nowrap; }
+  .note { background: var(--card-2); border-left: 5px solid var(--cream); padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0; }
+  .muted { color: var(--muted); }
+  .steps { counter-reset: s; list-style: none; padding: 0; }
+  .steps li { counter-increment: s; position: relative; padding-left: 46px; margin: 12px 0; }
+  .steps li::before { content: counter(s); position: absolute; left: 0; top: -2px; width: 32px; height: 32px; border-radius: 50%; background: var(--cream); color: #2a170d; font-weight: 800; display: grid; place-items: center; }
+  footer { text-align: center; color: var(--muted); padding: 0 16px 40px; }
+</style>
+</head>
+<body>
+<div class="tape"></div>
+<header>
+  <h1>Kiez-Watchparty · Anleitung</h1>
+  <p>St. Pauli VBL Overlay für OBS und Discord – Einrichtung, Animationen, Ablauf eines Abends</p>
+</header>
+<nav>
+  <a href="#setup">Einrichten</a>
+  <a href="#discord">Discord teilen</a>
+  <a href="#animationen">Animationen auslösen</a>
+  <a href="#abend">Ablauf eines Abends</a>
+  <a href="#sounds">Sounds</a>
+  <a href="#probleme">Probleme</a>
+</nav>
+<main>
+
+<section id="setup">
+  <h2>Einrichten (einmalig)</h2>
+  <ol class="steps">
+    <li>Den Ordner <code>stpauli-vbl-overlay</code> an einen festen Ort legen, z. B. <code>Dokumente</code>. Danach nicht mehr verschieben.</li>
+    <li><b>OBS schließen</b>, dann <code>SETUP.bat</code> doppelklicken. Zeigt Windows „Der Computer wurde geschützt“: <i>Weitere Informationen → Trotzdem ausführen</i>.</li>
+    <li>OBS öffnen → <b>Szenensammlung → St. Pauli VBL Watchparty</b>.</li>
+    <li><b>Docks → Benutzerdefinierte Browser-Docks</b> → Name <code>Kiez-Steuerpult</code>, bei URL <kbd>Strg</kbd>+<kbd>V</kbd> (das Setup hat die Adresse kopiert) → <i>Anwenden</i>. Das Dock z. B. rechts neben die Szenen ziehen.</li>
+    <li>Quelle <b>Webcam</b> doppelklicken → Kamera wählen. Quelle <b>VBL Stream (Browserfenster)</b> → das Browserfenster mit der VBL wählen.</li>
+    <li>Spielst du auf der <b>Konsole</b>: in Szene <i>2 LIVE</i> die Quelle <code>FC 26 - Capturekarte (Konsole)</code> einblenden (Auge) und <code>FC 26 - Spielaufnahme (PC)</code> ausblenden.</li>
+    <li><b>Discord „Im Voice“</b>: auf <code>streamkit.discord.com/overlay</code> → <i>Install for OBS</i> → <i>Voice Widget</i> → Server und Sprachkanal wählen → URL kopieren → in OBS bei <code>Discord Voice (StreamKit)</code> einfügen.</li>
+  </ol>
+  <p class="muted">Beim ersten Mal einmal alle Test-Knöpfe im Steuerpult durchklicken, dann weißt du, wie alles aussieht.</p>
+</section>
+
+<section id="discord">
+  <h2>In Discord übertragen</h2>
+  <ol class="steps">
+    <li>In OBS mit Rechtsklick ins Vorschaubild → <b>Fensterprojektor (Programm)</b>. Das Fenster offen lassen, es darf auch hinter dem Spiel liegen.</li>
+    <li>In Discord dem Sprachkanal beitreten → <b>Bildschirm teilen</b> → Reiter <i>Anwendungen</i> → <b>Fensterprojektor (Programm)</b> → <i>Go Live</i>.</li>
+  </ol>
+  <div class="note">Ohne Nitro überträgt Discord mit 720p/30, mit Nitro bis 1080p/60. Die Tor- und Sieg-Sounds laufen über OBS, deine Freunde hören sie also mit. Den VBL-Ton holen sich deine Leute am besten direkt von der VBL auf Twitch.</div>
+</section>
+
+<section id="animationen">
+  <h2>Animationen auslösen – Spickzettel</h2>
+  <p>Alles bedienst du im <b>Kiez-Steuerpult</b> (das Dock in OBS). Die Animationen erscheinen sofort im Bild, also auch bei deinen Freunden im Discord.</p>
+  <div class="table-wrap">
+  <table>
+    <thead><tr><th>Animation</th><th>So löst du sie aus</th><th>Was passiert</th><th>Sichtbar in</th></tr></thead>
+    <tbody>
+      <tr><td>⚽ Eigenes Tor</td><td>Bereich <i>Mein Match</i> → <span class="btn">+ TOR</span></td><td>Score springt hoch, braun-weiße Bänder, riesiges „TOOOR!“, zufälliger Aufkleber („Der Kiez bebt!“, „Braun-weiß!“ …), Konfetti, das Bild wackelt. Sound <code>tor.mp3</code></td><td>2 LIVE</td></tr>
+      <tr><td>😬 Gegentor</td><td><span class="btn">+ Gegentor</span></td><td>Kleine Einblendung „AUA – Gegentor“. Mit Haken bei <i>Gegentor groß zeigen</i> kommt eine graue „GEGENTOR“-Animation. Sound <code>gegentor.mp3</code> nur bei der großen Variante</td><td>2 LIVE</td></tr>
+      <tr><td>🏁 Abpfiff</td><td><span class="btn yellow">Abpfiff → Bilanz</span></td><td>Je nach Ergebnis „SIEG! – 3 Punkte für den Kiez!“, „REMIS“ oder „NIEDERLAGE“. Danach zählt die Bilanz S/U/N hoch, aus „Spiel 1“ wird „Spiel 2“, das Ergebnis geht auf 0:0. Sounds <code>sieg</code> / <code>remis</code> / <code>niederlage.mp3</code></td><td>2 LIVE, 3 WATCHPARTY</td></tr>
+      <tr><td>🤎 St. Pauli trifft (VBL)</td><td>Bereich <i>VBL Konferenz</i> → im FCSP-Spiel das <span class="btn">+</span> auf der FCSP-Seite</td><td>Dieselbe große „TOOOR!“-Feier mit „St. Pauli trifft!“, dazu leuchtet die Zeile auf. Sound <code>tor.mp3</code></td><td>2 LIVE, 3 WATCHPARTY</td></tr>
+      <tr><td>Gegentor für St. Pauli (VBL)</td><td>Im FCSP-Spiel das <span class="btn">+</span> beim Gegner</td><td>Einblendung „Gegentor für FCSP“, die Zeile leuchtet auf</td><td>2 LIVE, 3 WATCHPARTY</td></tr>
+      <tr><td>Anderes VBL-Tor</td><td><span class="btn">+</span> bei einem anderen Spiel</td><td>Die Zeile leuchtet auf, links fährt „Tor für …“ mit dem Spielstand rein. Läuft auch im Ticker mit</td><td>2 LIVE, 3 WATCHPARTY</td></tr>
+      <tr><td>▶ Intro „Die VBL ist zurück“</td><td>Läuft <b>automatisch</b>, wenn du in Szene <i>2 LIVE</i> wechselst. Manuell: <span class="btn">▶ Intro</span></td><td>Absperrband, Hafen-Skyline, „DIE VBL IST ZURÜCK“ und ein „Road to Hamburg“-Stempel. Sound <code>intro.mp3</code></td><td>2 LIVE, 3 WATCHPARTY (manuell)</td></tr>
+      <tr><td>📣 Eigene Einblendung</td><td><i>Eigene Einblendung</i>: Überschrift + Text eingeben → <span class="btn">Senden</span></td><td>Kasten fährt links ins Bild, z. B. „HALBZEIT – FCSP führt 2:1“ oder „Nächstes Spiel 20:00“</td><td>2 LIVE, 3 WATCHPARTY</td></tr>
+      <tr><td>⏱ Countdown-Ende</td><td>Startzeit setzen: <span class="btn cream">+5</span> / <span class="btn cream">+15</span> oder Datum/Uhrzeit eintragen</td><td>Bei 0 erscheint „ANSTOSS!“ mit Konfetti</td><td>1 START</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Testen, ohne den Spielstand zu ändern</h3>
+  <p><span class="btn cream">⚽ Tor-Animation testen</span>, <span class="btn">St. Pauli-Tor (VBL) testen</span> und <span class="btn">Sieg-Animation testen</span> spielen nur die Animation ab. Spielstand und Bilanz bleiben unverändert.</p>
+
+  <h3>Vertippt?</h3>
+  <ul>
+    <li>Mit <span class="btn">−</span> korrigierst du jeden Spielstand. Dabei läuft keine Animation, nur die Zahl wackelt kurz.</li>
+    <li>Bilanz falsch? Im Bereich <i>Bilanz</i> mit − / + korrigieren.</li>
+  </ul>
+
+  <h3>Tastenkürzel (optional)</h3>
+  <p>In OBS Rechtsklick auf die Quelle <code>Overlay Live</code> → <b>Interagieren</b>. Im Fenster, das aufgeht: <kbd>I</kbd> Intro, <kbd>G</kbd> Tor, <kbd>H</kbd> Gegentor, <kbd>S</kbd> Sieg. Das spielt nur die Animation ab, ohne den Spielstand zu ändern.</p>
+
+  <div class="note"><b>Tipp beim Zocken:</b> Nach einem Tor zeigt FC 26 eine Wiederholung. Das ist der perfekte Moment für <span class="btn">+ TOR</span>: Die Animation läuft genau dann, wenn alle auf den Bildschirm schauen.</div>
+</section>
+
+<section id="abend">
+  <h2>Ablauf eines Abends</h2>
+  <ol class="steps">
+    <li><b>Vorher:</b> Im Steuerpult die VBL-Paarungen eintragen (<span class="btn">+ Spiel hinzufügen</span>, Kürzel z. B. <code>FCSP</code>, Status <code>20:00</code>), Gegnernamen für dein Match, Startzeit mit <span class="btn cream">+15</span>.</li>
+    <li><b>Szene 1 START</b> aktiv, in Discord <i>Go Live</i> starten. Deine Leute sehen den Countdown und den Zeitstrahl „Road to Hamburg“.</li>
+    <li><b>Anpfiff in der VBL:</b> Status auf <code>LIVE</code> (<span class="btn">Alle auf LIVE</span>), zu <b>Szene 3 WATCHPARTY</b> wechseln.</li>
+    <li><b>Selbst zocken:</b> zu <b>Szene 2 LIVE</b> wechseln, das Intro läuft. Tore mit <span class="btn">+ TOR</span>, am Ende <span class="btn yellow">Abpfiff → Bilanz</span>.</li>
+    <li><b>VBL-Tore</b> zwischendurch per <span class="btn">+</span> in der Konferenz eintragen. Trifft St. Pauli, gibt’s die große Feier.</li>
+    <li><b>Kurz weg?</b> Szene <b>4 PAUSE</b>. <b>Schluss:</b> Szene <b>5 ENDE</b>, dann Go Live beenden.</li>
+  </ol>
+</section>
+
+<section id="sounds">
+  <h2>Sounds (optional)</h2>
+  <p>Leg eigene MP3s mit diesen Namen in den Ordner <code>assets</code>: <code>tor.mp3</code>, <code>gegentor.mp3</code>, <code>sieg.mp3</code>, <code>remis.mp3</code>, <code>niederlage.mp3</code>, <code>intro.mp3</code>. Fehlt eine Datei, bleibt es still.</p>
+  <p>Ein/Aus und Lautstärke stellst du im Steuerpult unter <i>Sound</i> ein. Die Sounds laufen über OBS, du und deine Freunde im Discord hören sie.</p>
+</section>
+
+<section id="probleme">
+  <h2>Probleme &amp; Lösungen</h2>
+  <ul>
+    <li><b>Steuerpult reagiert, im Bild passiert aber nichts:</b> Dock und Overlays müssen aus demselben Ordner kommen. <code>SETUP.bat</code> erneut ausführen und das Dock mit der neuen Adresse anlegen. Notlösung: im Ordner <code>python -m http.server 8765</code> starten und überall <code>http://localhost:8765/…</code> statt <code>file:///…</code> verwenden.</li>
+    <li><b>Ordner verschoben, jetzt fehlt alles:</b> OBS schließen, <code>SETUP.bat</code> im neuen Ordner ausführen, Dock-URL anpassen.</li>
+    <li><b>Kein Sound:</b> Dateiname exakt wie oben, mit Endung <code>.mp3</code>? Im Steuerpult <i>Sounds abspielen</i> an? In OBS ist die Overlay-Quelle im Audiomixer nicht stumm?</li>
+    <li><b>„Im Voice“ zeigt nur den Platzhalter:</b> Die StreamKit-URL ist noch nicht eingetragen, siehe Einrichten, Schritt 7.</li>
+    <li><b>Freunde sehen schwarz:</b> In Discord den <i>Fensterprojektor (Programm)</i> teilen, nicht das OBS-Hauptfenster. Der Projektor darf nicht minimiert sein.</li>
+    <li><b>Schrift sieht anders aus:</b> Die Schriften kommen aus dem Internet, ohne Verbindung nimmt das Overlay Ersatzschriften.</li>
+  </ul>
+</section>
+
+</main>
+<footer>Forza St. Pauli! · Road to Hamburg 2026/27</footer>
+<div class="tape"></div>
+</body>
+</html>
